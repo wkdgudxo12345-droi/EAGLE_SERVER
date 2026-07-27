@@ -1,0 +1,22 @@
+from __future__ import annotations
+from typing import Any
+
+def plain_text(prop: dict[str, Any] | None) -> str:
+    if not prop: return ""
+    t = prop.get("type")
+    if t == "title": values = prop.get("title", [])
+    elif t == "rich_text": values = prop.get("rich_text", [])
+    elif t == "url": return prop.get("url") or ""
+    elif t == "select": return (prop.get("select") or {}).get("name", "")
+    elif t == "status": return (prop.get("status") or {}).get("name", "")
+    elif t == "number": return str(prop.get("number") if prop.get("number") is not None else "")
+    elif t == "checkbox": return "true" if prop.get("checkbox") else "false"
+    else: return ""
+    return "".join(v.get("plain_text", "") for v in values)
+
+def text_value(v: str) -> dict[str, Any]:
+    return {"rich_text": [{"type": "text", "text": {"content": v[:2000]}}]}
+
+def number_value(v: float | int) -> dict[str, Any]: return {"number": round(float(v), 1)}
+def select_value(v: str) -> dict[str, Any]: return {"select": {"name": v}}
+def checkbox_value(v: bool) -> dict[str, Any]: return {"checkbox": v}
