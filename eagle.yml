@@ -1,0 +1,51 @@
+# Eagle Free Server
+
+비용 0원으로 GitHub Actions에서 실행되는 채용 공고 배치 파이프라인입니다.
+
+## 실제 처리 순서
+
+1. Notion DB 전체 페이지를 페이지네이션으로 읽음
+2. URL 활성·개별 공고 여부 확인
+3. 모든 행에 CCSTM 점수 산정
+4. 모든 행에 HR Score 산정
+5. Reality/RAG 점수 산정
+6. Red Team 하드게이트 및 중복 검출
+7. A/B는 Main DB 유지
+8. C/Reject는 `archived=true`로 Notion에서 보관 처리
+9. 전체 판정 JSON 보고서 생성
+
+## 무료인 이유
+
+- 공개 GitHub 저장소의 표준 GitHub-hosted Actions는 무료
+- 비공개 저장소도 GitHub Free에서 월 2,000분 포함
+- 외부 유료 LLM API를 사용하지 않음
+- Notion API만 사용
+
+## 설치
+
+1. 이 폴더를 새 GitHub 저장소에 업로드합니다.
+2. GitHub 저장소 → Settings → Secrets and variables → Actions에서 아래 두 개를 등록합니다.
+   - `NOTION_TOKEN`
+   - `NOTION_DATABASE_ID`
+3. Notion integration을 대상 DB에 연결합니다.
+4. Actions → Eagle Job Pipeline → Run workflow에서 첫 실행은 `apply_changes=false`로 확인합니다.
+5. 결과 Artifact의 `report.json`을 확인한 후 `apply_changes=true`로 실행합니다.
+
+## 중요
+
+- `APPLY_CHANGES=false`: 점수 계산만 하고 Notion을 수정하지 않습니다.
+- `APPLY_CHANGES=true`: 점수·판정을 기록합니다.
+- `ARCHIVE_REJECTED=true`: C/Reject를 휴지통이 아니라 Notion 보관 상태로 전환합니다. 복구 가능합니다.
+- 스케줄 실행은 하루 3회입니다.
+
+## 로컬 실행
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+export NOTION_TOKEN='...'
+export NOTION_DATABASE_ID='...'
+python -m eagle.main
+```

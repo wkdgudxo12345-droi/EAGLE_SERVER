@@ -1,0 +1,4 @@
+NOTION_TOKEN=secret_xxxxxxxxx
+NOTION_DATABASE_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+APPLY_CHANGES=false
+ARCHIVE_REJECTED=true
