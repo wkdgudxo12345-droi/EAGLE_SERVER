@@ -52,11 +52,19 @@ def extract_record(properties: Mapping[str, Mapping[str, Any]]) -> dict[str, str
     """Normalize the existing Eagle Notion schemas into one internal record.
 
     The project has used different property names across Stage 1, Stage 2, Stage 3
-    and Final databases.  The pipeline must read the existing database rather than
+    and Final databases. The pipeline must read the existing database rather than
     silently scoring blank fields or creating a replacement schema.
     """
 
-    return {
+    record = {
         canonical: _first_text(properties, aliases)
         for canonical, aliases in FIELD_ALIASES.items()
     }
+
+    # The restored deterministic scorer still uses the historical canonical keys.
+    # Keep those aliases populated so the transition to the V4 policy runner does
+    # not silently zero the visa or location components.
+    record["Region"] = record["Location"]
+    record["WHV/88 Days"] = record["Second Visa"]
+    record["Application Status"] = record["Operational Decision"]
+    return record
