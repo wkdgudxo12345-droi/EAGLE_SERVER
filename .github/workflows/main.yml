@@ -90,10 +90,13 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID }}
+          NOTION_VERSION: "2026-03-11"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
           APPLY_CHANGES: "false"
           ARCHIVE_REJECTED: "false"
+          STRICT_SCHEMA: "true"
           MAX_ROWS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_rows || '' }}
           URL_CHECK_ENABLED: "true"
           URL_CHECK_TIMEOUT_SECONDS: "12"
