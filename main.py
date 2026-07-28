@@ -1,6 +1,6 @@
 """Compatibility entry point for GitHub Actions and local execution."""
 
-from eagle.main import main
+from eagle.v4_main import main
 
 
 if __name__ == "__main__":
