@@ -1,7 +1,6 @@
 thresholds:
   fit_a: 82
   fit_b: 68
-  reject_below: 68
   min_reality: 55
   min_hr: 60
   min_ccstm: 68
@@ -37,6 +36,8 @@ hard_reject_terms:
   - australian citizenship required
   - permanent resident only
   - minimum 3 years australian experience
+  - unpaid volunteer
+  - accommodation exchange
 
 preferred_terms:
   - staff accommodation
@@ -53,8 +54,19 @@ preferred_terms:
   - site administrator
   - mobilisation
 
+experience_terms:
+  - customer service
+  - guest service
+  - reservations
+  - operations
+  - escalation
+  - quality assurance
+  - training
+  - hotel
+  - flight
+
 search_url_patterns:
-  - '/jobs?'
-  - 'seek.com.au/jobs'
-  - 'indeed.com/jobs'
-  - 'linkedin.com/jobs/search'
+  - /jobs?
+  - seek.com.au/jobs
+  - indeed.com/jobs
+  - linkedin.com/jobs/search
