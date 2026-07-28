@@ -37,6 +37,18 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "Operational Decision": ("Operational Decision", "Application Status"),
 }
 
+FATAL_SCHEMA_FIELDS = ("Opportunity", "Canonical URL")
+PROMOTION_SCHEMA_FIELDS = (
+    "Location",
+    "Freshness",
+    "Car/Licence",
+    "Accommodation",
+    "Second Visa",
+    "Audit Status",
+    "Evidence Grade",
+    "Verification Level",
+)
+
 
 def _first_text(
     properties: Mapping[str, Mapping[str, Any]], aliases: tuple[str, ...]
@@ -46,6 +58,33 @@ def _first_text(
         if value.strip():
             return value.strip()
     return ""
+
+
+def schema_health(schema: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Report whether an existing Notion data source can support Eagle V4.
+
+    Missing title/URL fields make the run meaningless and are fatal. Missing
+    promotion fields would silently turn the whole database into HOLD, so strict
+    production mode rejects them before spending time checking hundreds of URLs.
+    """
+
+    names = set(schema)
+    resolved = {
+        canonical: next((alias for alias in aliases if alias in names), None)
+        for canonical, aliases in FIELD_ALIASES.items()
+    }
+    missing_fatal = [
+        field for field in FATAL_SCHEMA_FIELDS if resolved.get(field) is None
+    ]
+    missing_promotion = [
+        field for field in PROMOTION_SCHEMA_FIELDS if resolved.get(field) is None
+    ]
+    return {
+        "resolved_aliases": resolved,
+        "missing_fatal": missing_fatal,
+        "missing_promotion": missing_promotion,
+        "ready": not missing_fatal and not missing_promotion,
+    }
 
 
 def extract_record(properties: Mapping[str, Mapping[str, Any]]) -> dict[str, str]:
