@@ -9,7 +9,7 @@ from typing import Any
 
 import requests
 
-from .evidence_rag import run_evidence_rag
+from .evidence_rag_v2 import run_evidence_rag
 from .main import check_url, env_bool, env_int, load_config
 from .notion import NotionClient
 from .policy import evaluate_policy
@@ -94,7 +94,7 @@ def main() -> int:
         return 2
 
     # The user's project rule is append-only: existing Stage 1/2/3/Final rows
-    # must not be modified or archived.  Promotion to Final will be a separate,
+    # must not be modified or archived. Promotion to Final will be a separate,
     # deduplicated append-only command after the audit runner is accepted.
     if apply_changes or archive_rejected:
         print(
@@ -192,9 +192,9 @@ def main() -> int:
             final_fit = "C"
             decision = "VERIFY THEN APPLY"
 
-        reasons = list(dict.fromkeys(
-            scoring.reasons + rag.reasons + policy.reasons
-        ))
+        reasons = list(
+            dict.fromkeys(scoring.reasons + rag.reasons + policy.reasons)
+        )
         row = {
             "id": str(page.get("id", "")),
             "opportunity": record.get("Opportunity", ""),
@@ -237,7 +237,9 @@ def main() -> int:
 
     _write_reports(report, output_dir)
     summary = {
-        "apply_now": sum(1 for row in report if row["decision"] == "APPLY NOW"),
+        "apply_now": sum(
+            1 for row in report if row["decision"] == "APPLY NOW"
+        ),
         "verify": sum(
             1 for row in report if row["decision"] == "VERIFY THEN APPLY"
         ),
