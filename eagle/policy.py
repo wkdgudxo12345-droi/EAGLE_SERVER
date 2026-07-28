@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -22,11 +23,20 @@ def _contains(value: str, terms: tuple[str, ...]) -> bool:
     return any(term in value for term in terms)
 
 
+def _words(value: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", value.lower()))
+
+
 def second_visa_state(record: dict[str, Any]) -> str:
     value = _lower(record.get("Second Visa"))
-    if _contains(value, ("likely", "eligible", "verified yes", "yes")):
+    words = _words(value)
+    if value in {"likely", "eligible", "verified yes", "yes"}:
         return "LIKELY"
-    if _contains(value, ("no", "unlikely", "ineligible")):
+    if "likely" in words or ("verified" in words and "yes" in words):
+        return "LIKELY"
+    if value in {"no", "unlikely", "ineligible"}:
+        return "NO"
+    if "unlikely" in words or "ineligible" in words:
         return "NO"
     return "UNKNOWN"
 
@@ -51,6 +61,14 @@ def _freshness_days(record: dict[str, Any]) -> float | None:
         return None
 
 
+def _accommodation_provided(value: str) -> bool:
+    if not value or value in {"no", "unknown", "not stated"}:
+        return False
+    if "not provided" in value or "no accommodation" in value:
+        return False
+    return _contains(value, ("provided", "included", "live on site", "staff housing"))
+
+
 def evaluate_policy(
     record: dict[str, Any],
     *,
@@ -62,7 +80,7 @@ def evaluate_policy(
 ) -> PolicyDecision:
     """Apply Eagle's non-negotiable promotion order.
 
-    Scores are advisory.  They can never override second/third-year visa evidence,
+    Scores are advisory. They can never override second/third-year visa evidence,
     mobility, vacancy proof, audit state, evidence quality, or Red Team/RAG HOLD.
     """
 
@@ -106,23 +124,19 @@ def evaluate_policy(
         holds.append("live vacancy not confirmed")
     if not individual_url:
         holds.append("individual vacancy URL not confirmed")
-    if audit and audit != "verified":
-        holds.append("audit status is not VERIFIED")
-    if not audit:
-        holds.append("audit status is missing")
+    if audit != "verified":
+        holds.append("audit status VERIFIED is required")
     if grade not in {"a", "b"}:
         holds.append("evidence grade A/B is required")
-    if verification and "individual" not in verification.lower():
+    if "individual" not in verification:
         holds.append("individual verification level is required")
     if freshness is None:
         holds.append("freshness is unknown")
     elif freshness > 14:
         holds.append("vacancy is older than 14 days")
 
-    mobility_clear = (
-        _contains(car, ("not required", "no licence", "not stated"))
-        or _contains(accommodation, ("provided", "included", "live on site", "yes"))
-    )
+    car_explicitly_clear = _contains(car, ("not required", "no licence required"))
+    mobility_clear = car_explicitly_clear or _accommodation_provided(accommodation)
     if not mobility_clear:
         holds.append("no-car transport or staff accommodation is unverified")
 
