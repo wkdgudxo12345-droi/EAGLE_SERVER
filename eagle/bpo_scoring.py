@@ -139,6 +139,12 @@ def _freshness_score(value: Any) -> float:
 def _authorization_score(record: dict[str, Any], profile: dict[str, Any]) -> tuple[float, bool, str | None]:
     authorization = _match_text(record.get("Work Authorization"))
     sponsorship = _match_text(record.get("Visa Sponsorship"))
+    unknown_values = {"", "unknown", "not stated", "n a", "na", "not applicable"}
+    if authorization in unknown_values:
+        authorization = ""
+    if sponsorship in unknown_values:
+        sponsorship = ""
+
     candidate_eligible = _normalized(record.get("Candidate Eligible")) in {
         "yes",
         "true",
