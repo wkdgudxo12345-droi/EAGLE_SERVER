@@ -2,6 +2,7 @@ from eagle.scoring import duplicate_key, normalize_url, score
 
 
 CONFIG = {
+    "require_visa_eligibility": True,
     "thresholds": {
         "fit_a": 82,
         "fit_b": 68,
@@ -35,10 +36,10 @@ CONFIG = {
             "freshness": 10,
         },
     },
-    "hard_reject_terms": ["own reliable vehicle"],
+    "hard_reject_terms": ["own reliable vehicle", "unpaid volunteer"],
     "preferred_terms": ["guest service", "reservations", "training provided"],
     "experience_terms": ["customer service", "reservations", "operations"],
-    "search_url_patterns": ["seek.com.au/jobs", "/jobs?"],
+    "search_url_patterns": ["seek.com.au/jobs", "/jobs?", "jora.com/"],
 }
 
 
@@ -77,12 +78,44 @@ def test_hard_gate_rejects_role() -> None:
     assert result.hard_gate is True
 
 
+def test_punctuation_does_not_bypass_unpaid_hard_gate() -> None:
+    record = base_record()
+    record["Evidence Text"] = "UNPAID/VOLUNTEER accommodation arrangement"
+    result = score(record, CONFIG, True)
+    assert result.fit == "Reject"
+    assert "unpaid volunteer" in result.reasons[0]
+
+
+def test_closed_application_status_rejects_even_when_url_is_live() -> None:
+    record = base_record()
+    record["Application Status"] = "CLOSED"
+    result = score(record, CONFIG, True)
+    assert result.fit == "Reject"
+    assert "application status is closed" in result.reasons
+
+
+def test_negative_specified_work_status_is_a_hard_gate() -> None:
+    record = base_record()
+    record["WHV/88 Days"] = "No"
+    result = score(record, CONFIG, True)
+    assert result.fit == "Reject"
+    assert "specified-work visa eligibility is negative" in result.reasons
+
+
 def test_search_page_never_becomes_apply_ready() -> None:
     record = base_record()
     record["Canonical URL"] = "https://www.seek.com.au/jobs?keywords=guest"
     result = score(record, CONFIG, True)
     assert result.fit == "C"
     assert result.verdict == "RECHECK"
+
+
+def test_jora_search_page_is_not_an_individual_vacancy() -> None:
+    record = base_record()
+    record["Canonical URL"] = "https://au.jora.com/Hotel-Reception-jobs"
+    result = score(record, CONFIG, True)
+    assert result.fit == "C"
+    assert "individual job URL not verified" in result.reasons
 
 
 def test_closed_url_rejects_role() -> None:
