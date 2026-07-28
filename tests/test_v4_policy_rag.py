@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from eagle.evidence_rag import run_evidence_rag
+from eagle.evidence_rag_v2 import run_evidence_rag
 from eagle.policy import evaluate_policy
 from eagle.record import extract_record
 
@@ -56,17 +56,18 @@ def evaluate(record: dict[str, str], *, scoring_hard_gate: bool = False):
 def test_verified_likely_role_can_pass_policy_and_rag() -> None:
     rag, policy = evaluate(base_record())
     assert rag.verdict == "PASS"
-    assert rag.provider == "deterministic-hybrid-rag"
+    assert rag.provider == "deterministic-hybrid-rag-v2"
     assert policy.proof_gate == "PASS"
     assert policy.final_decision == "APPLY NOW"
     assert policy.promotion_allowed is True
 
 
-def test_unknown_second_visa_can_never_be_apply_now() -> None:
+def test_unknown_second_visa_is_hold_not_false_no() -> None:
     record = base_record()
     record["Second Visa"] = "Unknown"
     rag, policy = evaluate(record)
-    assert rag.verdict != "PASS"
+    assert rag.verdict == "HOLD"
+    assert policy.second_visa_state == "UNKNOWN"
     assert policy.proof_gate == "HOLD"
     assert policy.final_decision == "VERIFY THEN APPLY"
     assert policy.promotion_allowed is False
@@ -88,6 +89,16 @@ def test_driver_licence_required_is_a_hard_reject() -> None:
     rag, policy = evaluate(record)
     assert rag.verdict == "REJECT"
     assert policy.proof_gate == "REJECT"
+    assert policy.promotion_allowed is False
+
+
+def test_not_stated_transport_is_hold_without_accommodation() -> None:
+    record = base_record()
+    record["Car/Licence"] = "Not stated"
+    record["Accommodation"] = "Unknown"
+    rag, policy = evaluate(record)
+    assert rag.verdict == "HOLD"
+    assert policy.proof_gate == "HOLD"
     assert policy.promotion_allowed is False
 
 
@@ -124,8 +135,10 @@ def test_existing_notion_schema_aliases_are_normalized() -> None:
     record = extract_record(properties)
     assert record["Opportunity"] == "Room Attendant"
     assert record["Location"] == "Darwin NT"
+    assert record["Region"] == "Darwin NT"
     assert record["Canonical URL"] == "https://employer.example/job/1"
     assert record["Second Visa"] == "Likely"
+    assert record["WHV/88 Days"] == "Likely"
     assert record["Freshness"] == "3"
 
 
