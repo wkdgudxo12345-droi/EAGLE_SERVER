@@ -1,0 +1,41 @@
+[
+  {
+    "id": "homeaffairs:area-industry-rule",
+    "claim_key": "policy_area_and_industry",
+    "value": "yes",
+    "text": "Subclass 417 specified work must be performed in an approved industry and, where the rule requires it, an approved area. Tourism and hospitality work is limited to Northern Australia or Remote and Very Remote Australia.",
+    "source_type": "official",
+    "source_domain": "immi.homeaffairs.gov.au",
+    "source_url": "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/work-holiday-417/specified-work",
+    "checked_at": "2026-07-28",
+    "authority": 1.0,
+    "reality_checked": true,
+    "critical": true
+  },
+  {
+    "id": "homeaffairs:paid-work-evidence",
+    "claim_key": "policy_paid_work_evidence",
+    "value": "yes",
+    "text": "Specified work must be genuine paid employment and applicants should retain evidence such as payslips, contracts, bank records, employer details and the actual work location.",
+    "source_type": "official",
+    "source_domain": "immi.homeaffairs.gov.au",
+    "source_url": "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/work-holiday-417/specified-work",
+    "checked_at": "2026-07-28",
+    "authority": 1.0,
+    "reality_checked": true,
+    "critical": true
+  },
+  {
+    "id": "eagle:no-car-project-constraint",
+    "claim_key": "policy_no_car_constraint",
+    "value": "yes",
+    "text": "Eagle project constraint: the candidate has no Australian driver licence and will not purchase a car. A role requiring a licence or own vehicle is a hard reject; unknown transport remains HOLD.",
+    "source_type": "project_policy",
+    "source_domain": "eagle-project-policy",
+    "source_url": null,
+    "checked_at": "2026-07-28",
+    "authority": 1.0,
+    "reality_checked": true,
+    "critical": true
+  }
+]
