@@ -1,0 +1,154 @@
+profile:
+  id: korean_bpo
+  name: Korean Speaker BPO / Customer Operations
+  version: 1
+  purpose: >-
+    Evaluate Korean-speaking BPO, travel operations, customer operations,
+    escalation, QA, SME, training and workforce-support vacancies using the
+    Eagle pipeline structure without reusing Australia working-holiday rules.
+
+candidate:
+  nationality: Korean
+  korean_level: Native
+  english_level: B1-B2
+  total_bpo_years: 3.25
+  employer_context: Agoda project at IGT Solutions
+  domains:
+    - hotel operations
+    - flight operations
+    - reservations
+    - refunds and reissues
+    - overbooking resolution
+    - supplier negotiation
+    - escalation handling
+    - quality assurance
+    - SME support
+    - new-hire training
+    - KPI and SLA operations
+  evidence:
+    - senior operations specialist
+    - 50-80 cases per day
+    - SLA 95%+
+    - team performance rank 1
+    - lowest DSAT
+    - zero fatal error
+    - trained 15+ new hires
+
+pipeline:
+  stages:
+    - collect
+    - normalize
+    - deduplicate
+    - hard_gate
+    - company_research
+    - role_research
+    - career_transfer_score
+    - hiring_reality_score
+    - red_team
+    - final_queue
+    - application_feedback
+
+role_families:
+  primary:
+    - Korean Customer Support
+    - Korean Travel Operations
+    - Reservations Operations
+    - Customer Operations
+    - Escalation Specialist
+    - Quality Analyst
+    - SME / Floor Support
+    - Trainer
+    - Workforce Management
+    - Real-Time Analyst
+    - Partner Support
+    - Vendor Operations
+  secondary:
+    - Customer Success Operations
+    - Trust and Safety Operations
+    - Content Operations
+    - Operations Coordinator
+    - Service Delivery Coordinator
+
+hard_gates:
+  reject_terms:
+    - unpaid
+    - volunteer only
+    - commission only
+    - self-employed only
+    - citizenship required
+    - permanent resident only
+    - local nationals only
+  reject_statuses:
+    - closed
+    - expired
+    - filled
+    - cancelled
+  non_individual_url_patterns:
+    - /jobs?
+    - /search?
+    - linkedin.com/jobs/search
+    - indeed.com/jobs
+    - jobstreet.com/jobs
+  work_authorization:
+    reject_when_local_only_and_candidate_ineligible: true
+    allow_unknown_as_recheck: true
+    sponsorship_positive_values:
+      - available
+      - yes
+      - supported
+      - employment pass provided
+
+thresholds:
+  apply_now: 78
+  priority_recheck: 64
+  minimum_hiring_reality: 55
+  minimum_evidence: 45
+
+weights:
+  career_transfer:
+    agoda_domain_match: 30
+    operations_match: 20
+    escalation_qa_training: 20
+    korean_language_value: 15
+    seniority_match: 10
+    tool_process_match: 5
+  hiring_reality:
+    vacancy_live: 20
+    individual_url: 15
+    work_authorization: 25
+    experience_requirement: 15
+    location_and_work_mode: 10
+    salary_and_contract: 5
+    evidence_quality: 10
+  strategic_value:
+    career_progression: 30
+    compensation: 20
+    brand_value: 15
+    transferable_scope: 20
+    stability: 15
+
+notion:
+  required_fields:
+    - Opportunity
+    - Company
+    - Country
+    - City
+    - Role Family
+    - Korean Requirement
+    - Work Authorization
+    - Visa Sponsorship
+    - Work Mode
+    - Employment Type
+    - Salary
+    - Source URL
+    - Vacancy Status
+    - Evidence Grade
+    - Career Transfer Score
+    - Hiring Reality Score
+    - Strategic Value Score
+    - Final Priority Score
+    - Red Team Verdict
+    - Apply Status
+    - CV Variant
+    - Hard Gate Reason
+    - Canonical Key
