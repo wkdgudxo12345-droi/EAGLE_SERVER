@@ -1,22 +1,22 @@
-name: Eagle One-Time Smoke
+name: Eagle Execution Probe
 
 on:
-  push:
+  pull_request:
     branches: [main]
     paths:
-      - '.github/workflows/one-time-smoke.yml'
+      - '.eagle/run-mode'
 
 permissions:
   contents: read
 
 concurrency:
-  group: eagle-one-time-smoke
-  cancel-in-progress: false
+  group: eagle-execution-probe-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
-  dry-run-10:
+  dry-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,20 +27,30 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m compileall -q eagle main.py
       - run: python -m pytest -q
-      - name: Run 10-row dry run
+      - name: Run Eagle in read-only mode
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           APPLY_CHANGES: 'false'
           ARCHIVE_REJECTED: 'false'
-          MAX_ROWS: '10'
           URL_CHECK_ENABLED: 'true'
-        run: python -m eagle
-      - name: Upload 10-row dry-run report
+        run: |
+          mode="$(tr -d '[:space:]' < .eagle/run-mode)"
+          if [ "$mode" = "all" ]; then
+            export MAX_ROWS=""
+          else
+            case "$mode" in
+              ''|*[!0-9]*) echo "Invalid run mode: $mode"; exit 2 ;;
+              *) export MAX_ROWS="$mode" ;;
+            esac
+          fi
+          echo "Eagle dry-run mode: ${MAX_ROWS:-all rows}"
+          python -m eagle
+      - name: Upload Eagle dry-run report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: eagle-dry-run-10-${{ github.run_number }}
+          name: eagle-execution-probe-${{ github.run_number }}
           path: |
             output/report.json
             output/report.csv
