@@ -28,6 +28,10 @@ def _contains_any(text: str, terms: list[str]) -> bool:
     return any(term.lower() in text for term in terms)
 
 
+def _normalized_match_text(value: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", value.lower())).strip()
+
+
 def _coverage(text: str, terms: list[str], *, floor: float = 0.0) -> float:
     if not terms:
         return floor
@@ -117,6 +121,7 @@ def score(
     record: dict[str, Any], config: dict[str, Any], live: bool | None
 ) -> ScoreResult:
     text = _text(record)
+    normalized_text = _normalized_match_text(text)
     thresholds = config.get("thresholds", {})
     weights = config.get("weights", {})
     hard_terms = [str(term).lower() for term in config.get("hard_reject_terms", [])]
@@ -130,7 +135,11 @@ def score(
     ]
 
     reasons: list[str] = []
-    matched_hard_terms = [term for term in hard_terms if term in text]
+    matched_hard_terms = [
+        term
+        for term in hard_terms
+        if _normalized_match_text(term) in normalized_text
+    ]
     hard_gate = bool(matched_hard_terms)
     if matched_hard_terms:
         reasons.append(f"hard gate: {', '.join(matched_hard_terms[:3])}")
@@ -140,8 +149,18 @@ def score(
         hard_gate = True
         reasons.append("car or licence required")
 
+    status_value = str(record.get("Application Status") or "").strip().lower()
+    if status_value in {"closed", "rejected", "do not apply", "delete candidate"}:
+        hard_gate = True
+        reasons.append(f"application status is {status_value}")
+
     accommodation_value = str(record.get("Accommodation") or "").lower()
-    visa_value = str(record.get("WHV/88 Days") or "").lower()
+    visa_value = str(record.get("WHV/88 Days") or "").strip().lower()
+    negative_visa_values = {"no", "unlikely", "ineligible"}
+    if config.get("require_visa_eligibility", False) and visa_value in negative_visa_values:
+        hard_gate = True
+        reasons.append("specified-work visa eligibility is negative")
+
     freshness = _freshness_score(str(record.get("Freshness") or ""))
     url = str(record.get("Canonical URL") or record.get("Source") or "")
     individual_url = _is_individual_url(url, search_patterns)
@@ -175,7 +194,7 @@ def score(
         if any(term in visa_value for term in ("likely", "yes", "eligible"))
         else 55.0
     )
-    if any(term in visa_value for term in ("no", "unlikely", "ineligible")):
+    if visa_value in negative_visa_values:
         visa = 0.0
 
     ccstm = _weighted(
