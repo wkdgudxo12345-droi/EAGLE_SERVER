@@ -12,16 +12,56 @@ if str(REPOSITORY_ROOT) not in sys.path:
 from eagle.main import check_url, env_bool, env_int, load_config, write_reports
 from eagle.scoring import score
 
+COMPACT_FIELDS = {
+    "o": "Opportunity",
+    "c": "Company",
+    "r": "Region",
+    "f": "Role Family",
+    "u": "Canonical URL",
+    "d": "Freshness",
+    "l": "Car/Licence",
+    "a": "Accommodation",
+    "v": "WHV/88 Days",
+    "s": "Application Status",
+    "h": "Evidence Text",
+}
+
+
+def expand_record(item: dict[str, object]) -> dict[str, object]:
+    if "o" not in item:
+        return {str(key): value for key, value in item.items()}
+    record: dict[str, object] = {"id": item.get("id", "")}
+    for compact, full in COMPACT_FIELDS.items():
+        record[full] = item.get(compact)
+    record["Source"] = ""
+    record["Source Job ID"] = ""
+    return record
+
+
+def load_records() -> list[dict[str, object]]:
+    configured = os.getenv("EAGLE_SNAPSHOT")
+    if configured:
+        paths = [Path(configured)]
+    else:
+        paths = [Path(".eagle/notion_snapshot.json")]
+        paths.extend(sorted(Path(".eagle").glob("notion_snapshot_part*.json")))
+
+    records: list[dict[str, object]] = []
+    for path in paths:
+        if not path.exists():
+            raise FileNotFoundError(f"Snapshot not found: {path}")
+        batch = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(batch, list):
+            raise ValueError(f"Snapshot must be a JSON array: {path}")
+        for item in batch:
+            if not isinstance(item, dict):
+                raise ValueError(f"Snapshot row is not an object: {path}")
+            records.append(expand_record(item))
+    return records
+
 
 def main() -> int:
-    snapshot_path = Path(os.getenv("EAGLE_SNAPSHOT", ".eagle/notion_snapshot.json"))
-    if not snapshot_path.exists():
-        raise FileNotFoundError(f"Snapshot not found: {snapshot_path}")
-
-    records = json.loads(snapshot_path.read_text(encoding="utf-8"))
-    if not isinstance(records, list):
-        raise ValueError("Snapshot must be a JSON array")
-
+    records = load_records()
     max_rows = env_int("MAX_ROWS")
     if max_rows:
         records = records[:max_rows]
@@ -36,10 +76,7 @@ def main() -> int:
         f"archive_rejected=false url_checks={url_checks}"
     )
 
-    for index, item in enumerate(records, 1):
-        if not isinstance(item, dict):
-            raise ValueError(f"Snapshot row {index} is not an object")
-        record = {str(key): value for key, value in item.items()}
+    for index, record in enumerate(records, 1):
         url = str(record.get("Canonical URL") or record.get("Source") or "")
         live = check_url(url) if url_checks else None
         result = score(record, config, live)
