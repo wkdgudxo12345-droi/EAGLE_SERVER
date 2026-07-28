@@ -38,11 +38,7 @@ jobs:
         id: eagle
         continue-on-error: true
         env:
-          NOTION_TOKEN_PRIMARY: ${{ secrets.NOTION_TOKEN }}
-          NOTION_API_TOKEN_CANDIDATE: ${{ secrets.NOTION_API_TOKEN }}
-          NOTION_SECRET_CANDIDATE: ${{ secrets.NOTION_SECRET }}
-          NOTION_INTEGRATION_TOKEN_CANDIDATE: ${{ secrets.NOTION_INTEGRATION_TOKEN }}
-          NOTION_API_KEY_CANDIDATE: ${{ secrets.NOTION_API_KEY }}
+          EAGLE_SECRET_CANDIDATES_JSON: ${{ toJSON(secrets) }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID || '2403ff84-448e-4b24-b30d-3ced754b5450' }}
           NOTION_VERSION: '2026-03-11'
@@ -62,38 +58,71 @@ jobs:
           EAGLE_CODE_SHA: ${{ github.sha }}
           SOFT_DEADLINE_SECONDS: '900'
         run: |
-          mkdir -p output state
-          selected_token=''
-          selected_name=''
-          candidates=(
-            NOTION_TOKEN_PRIMARY
-            NOTION_API_TOKEN_CANDIDATE
-            NOTION_SECRET_CANDIDATE
-            NOTION_INTEGRATION_TOKEN_CANDIDATE
-            NOTION_API_KEY_CANDIDATE
+          mkdir -p output state "$RUNNER_TEMP/eagle"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          import requests
+
+          raw = os.environ.get("EAGLE_SECRET_CANDIDATES_JSON", "{}")
+          try:
+              available = json.loads(raw)
+          except json.JSONDecodeError:
+              available = {}
+
+          candidates = [
+              (name, str(value))
+              for name, value in available.items()
+              if "NOTION" in name.upper() and str(value).strip()
+          ]
+          checked_names: list[str] = []
+          selected: tuple[str, str] | None = None
+          for name, token in sorted(candidates):
+              checked_names.append(name)
+              try:
+                  response = requests.get(
+                      "https://api.notion.com/v1/users/me",
+                      headers={
+                          "Authorization": f"Bearer {token}",
+                          "Notion-Version": os.environ["NOTION_VERSION"],
+                      },
+                      timeout=20,
+                  )
+              except requests.RequestException:
+                  continue
+              if response.status_code == 200:
+                  selected = (name, token)
+                  break
+
+          output = Path("output/run.log")
+          if selected is None:
+              names = ", ".join(checked_names) if checked_names else "none"
+              output.write_text(
+                  "No valid Notion integration token was found in GitHub Secrets.\n"
+                  f"Notion-named secrets checked: {names}.\n",
+                  encoding="utf-8",
+              )
+              raise SystemExit(2)
+
+          name, token = selected
+          token_path = Path(os.environ["RUNNER_TEMP"]) / "eagle" / "notion-token"
+          token_path.write_text(token, encoding="utf-8")
+          token_path.chmod(0o600)
+          output.write_text(
+              f"Using valid Notion credential from secret: {name}\n",
+              encoding="utf-8",
           )
-          for candidate_name in "${candidates[@]}"; do
-            candidate_value="${!candidate_name}"
-            [ -n "$candidate_value" ] || continue
-            http_status=$(curl --silent --show-error --output output/notion-auth-check.json --write-out '%{http_code}' \
-              --header "Authorization: Bearer $candidate_value" \
-              --header "Notion-Version: $NOTION_VERSION" \
-              https://api.notion.com/v1/users/me || true)
-            if [ "$http_status" = '200' ]; then
-              selected_token="$candidate_value"
-              selected_name="$candidate_name"
-              break
-            fi
-          done
-          rm -f output/notion-auth-check.json
-          if [ -z "$selected_token" ]; then
-            echo 'No valid Notion integration token was found in the configured GitHub Secrets.' | tee output/run.log
-            echo 'Checked: NOTION_TOKEN, NOTION_API_TOKEN, NOTION_SECRET, NOTION_INTEGRATION_TOKEN, NOTION_API_KEY.' | tee -a output/run.log
-            echo 'status=2' >> "$GITHUB_OUTPUT"
-            exit 2
+          PY
+          auth_status=$?
+          if [ "$auth_status" -ne 0 ]; then
+            cat output/run.log
+            echo "status=$auth_status" >> "$GITHUB_OUTPUT"
+            exit "$auth_status"
           fi
-          echo "Using valid Notion credential from $selected_name" | tee output/run.log
-          export NOTION_TOKEN="$selected_token"
+          export NOTION_TOKEN="$(cat "$RUNNER_TEMP/eagle/notion-token")"
+          rm -f "$RUNNER_TEMP/eagle/notion-token"
           set +e
           python -m eagle 2>&1 | tee -a output/run.log
           status=${PIPESTATUS[0]}
