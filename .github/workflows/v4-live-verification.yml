@@ -38,7 +38,11 @@ jobs:
         id: eagle
         continue-on-error: true
         env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_TOKEN_PRIMARY: ${{ secrets.NOTION_TOKEN }}
+          NOTION_API_TOKEN_CANDIDATE: ${{ secrets.NOTION_API_TOKEN }}
+          NOTION_SECRET_CANDIDATE: ${{ secrets.NOTION_SECRET }}
+          NOTION_INTEGRATION_TOKEN_CANDIDATE: ${{ secrets.NOTION_INTEGRATION_TOKEN }}
+          NOTION_API_KEY_CANDIDATE: ${{ secrets.NOTION_API_KEY }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID || '2403ff84-448e-4b24-b30d-3ced754b5450' }}
           NOTION_VERSION: '2026-03-11'
@@ -59,13 +63,39 @@ jobs:
           SOFT_DEADLINE_SECONDS: '900'
         run: |
           mkdir -p output state
-          if [ -z "$NOTION_TOKEN" ]; then
-            echo 'NOTION_TOKEN secret is missing' | tee output/run.log
+          selected_token=''
+          selected_name=''
+          candidates=(
+            NOTION_TOKEN_PRIMARY
+            NOTION_API_TOKEN_CANDIDATE
+            NOTION_SECRET_CANDIDATE
+            NOTION_INTEGRATION_TOKEN_CANDIDATE
+            NOTION_API_KEY_CANDIDATE
+          )
+          for candidate_name in "${candidates[@]}"; do
+            candidate_value="${!candidate_name}"
+            [ -n "$candidate_value" ] || continue
+            http_status=$(curl --silent --show-error --output output/notion-auth-check.json --write-out '%{http_code}' \
+              --header "Authorization: Bearer $candidate_value" \
+              --header "Notion-Version: $NOTION_VERSION" \
+              https://api.notion.com/v1/users/me || true)
+            if [ "$http_status" = '200' ]; then
+              selected_token="$candidate_value"
+              selected_name="$candidate_name"
+              break
+            fi
+          done
+          rm -f output/notion-auth-check.json
+          if [ -z "$selected_token" ]; then
+            echo 'No valid Notion integration token was found in the configured GitHub Secrets.' | tee output/run.log
+            echo 'Checked: NOTION_TOKEN, NOTION_API_TOKEN, NOTION_SECRET, NOTION_INTEGRATION_TOKEN, NOTION_API_KEY.' | tee -a output/run.log
             echo 'status=2' >> "$GITHUB_OUTPUT"
             exit 2
           fi
+          echo "Using valid Notion credential from $selected_name" | tee output/run.log
+          export NOTION_TOKEN="$selected_token"
           set +e
-          python -m eagle 2>&1 | tee output/run.log
+          python -m eagle 2>&1 | tee -a output/run.log
           status=${PIPESTATUS[0]}
           set -e
           echo "status=$status" >> "$GITHUB_OUTPUT"
