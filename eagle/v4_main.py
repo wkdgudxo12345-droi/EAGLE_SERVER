@@ -15,9 +15,9 @@ import requests
 
 from .evidence_rag_v2 import run_evidence_rag
 from .main import check_url, env_bool, env_int, load_config
-from .notion import NotionClient
+from .notion import DEFAULT_NOTION_VERSION, NotionClient
 from .policy import evaluate_policy
-from .record import extract_record
+from .record import extract_record, schema_health
 from .scoring import normalize_url, score
 
 
@@ -188,8 +188,11 @@ def _summary(report: list[dict[str, Any]], status: str) -> dict[str, Any]:
 def main() -> int:
     token = os.getenv("NOTION_TOKEN", "").strip()
     database_id = os.getenv("NOTION_DATABASE_ID", "").strip()
+    requested_data_source_id = os.getenv("NOTION_DATA_SOURCE_ID", "").strip()
+    notion_version = os.getenv("NOTION_VERSION", DEFAULT_NOTION_VERSION).strip()
     apply_changes = env_bool("APPLY_CHANGES", False)
     archive_rejected = env_bool("ARCHIVE_REJECTED", False)
+    strict_schema = env_bool("STRICT_SCHEMA", True)
     url_checks = env_bool("URL_CHECK_ENABLED", True)
     use_llm = env_bool("RAG_USE_LLM", False)
     require_llm = env_bool("REQUIRE_LLM_RAG", False)
@@ -205,8 +208,21 @@ def main() -> int:
     run_key = os.getenv("EAGLE_RUN_KEY", "local").strip() or "local"
     code_sha = os.getenv("EAGLE_CODE_SHA", os.getenv("GITHUB_SHA", "local"))
 
-    if not token or not database_id:
-        print("Missing NOTION_TOKEN or NOTION_DATABASE_ID", file=sys.stderr)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if not token or not (database_id or requested_data_source_id):
+        print(
+            "Missing NOTION_TOKEN and/or Notion database/data source ID",
+            file=sys.stderr,
+        )
+        return 2
+    if not evidence_path.exists():
+        message = f"Evidence file not found: {evidence_path}"
+        _atomic_json(
+            output_dir / "preflight.json",
+            {"status": "failed", "error": message},
+        )
+        print(message, file=sys.stderr)
         return 2
 
     # The user's project rule is append-only: existing Stage 1/2/3/Final rows
@@ -223,16 +239,50 @@ def main() -> int:
 
     try:
         config = load_config()
-        client = NotionClient(
-            token,
-            notion_version=os.getenv("NOTION_VERSION", "2022-06-28"),
+        client = NotionClient(token, notion_version=notion_version)
+        data_source_id = client.resolve_data_source_id(
+            database_id=database_id or None,
+            data_source_id=requested_data_source_id or None,
         )
+        schema = client.data_source_properties(data_source_id)
+        schema_report = schema_health(schema)
     except (OSError, ValueError, RuntimeError, requests.RequestException) as exc:
+        _atomic_json(
+            output_dir / "preflight.json",
+            {"status": "failed", "error": str(exc)},
+        )
         print(f"Startup failed: {exc}", file=sys.stderr)
         return 2
 
+    preflight = {
+        "status": "ready" if schema_report["ready"] else "schema_warning",
+        "notion_version": notion_version,
+        "database_id_supplied": bool(database_id),
+        "data_source_id": data_source_id,
+        "strict_schema": strict_schema,
+        "schema": schema_report,
+    }
+    _atomic_json(output_dir / "preflight.json", preflight)
+
+    missing_fatal = schema_report["missing_fatal"]
+    missing_promotion = schema_report["missing_promotion"]
+    if missing_fatal or (strict_schema and missing_promotion):
+        message = (
+            f"Notion schema preflight failed: fatal={missing_fatal}; "
+            f"promotion={missing_promotion}"
+        )
+        print(message, file=sys.stderr)
+        return 2
+
+    filter_properties = sorted(
+        {
+            str(alias)
+            for alias in schema_report["resolved_aliases"].values()
+            if alias
+        }
+    )
     fingerprint = _run_fingerprint(
-        database_id=database_id,
+        database_id=data_source_id,
         config=config,
         evidence_path=evidence_path,
         run_key=run_key,
@@ -243,7 +293,6 @@ def main() -> int:
         max_rows=max_rows,
     )
 
-    output_dir.mkdir(parents=True, exist_ok=True)
     state_dir.mkdir(parents=True, exist_ok=True)
     state_jsonl = state_dir / "report.jsonl"
     checkpoint_path = state_dir / "checkpoint.json"
@@ -251,7 +300,8 @@ def main() -> int:
     can_resume = (
         resume_enabled
         and prior_checkpoint.get("fingerprint") == fingerprint
-        and prior_checkpoint.get("status") in {"running", "paused", "failed", "interrupted"}
+        and prior_checkpoint.get("status")
+        in {"running", "paused", "failed", "interrupted"}
     )
 
     if can_resume:
@@ -292,17 +342,24 @@ def main() -> int:
     signal.signal(signal.SIGTERM, _request_stop)
     signal.signal(signal.SIGINT, _request_stop)
     started = time.monotonic()
-    last_page_id = str(prior_checkpoint.get("last_page_id", "")) if can_resume else ""
+    last_page_id = (
+        str(prior_checkpoint.get("last_page_id", "")) if can_resume else ""
+    )
     status = "completed"
     exit_code = 0
 
     print(
-        f"Starting report-only run | resume={can_resume} url_checks={url_checks} "
+        f"Starting report-only run | data_source={data_source_id} "
+        f"resume={can_resume} url_checks={url_checks} "
         f"rag_use_llm={use_llm} require_llm={require_llm} max_rows={max_rows}"
     )
 
     try:
-        pages = client.iter_database(database_id, max_rows=max_rows)
+        pages = client.iter_data_source(
+            data_source_id,
+            max_rows=max_rows,
+            filter_properties=filter_properties,
+        )
         for source_index, page in enumerate(pages, 1):
             page_id = str(page.get("id", ""))
             if page_id in completed_ids:
