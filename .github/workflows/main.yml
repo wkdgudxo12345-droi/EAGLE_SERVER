@@ -6,13 +6,13 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      apply_changes:
-        description: Write validated scores to Notion
+      run_llm_rag:
+        description: Run the optional OpenAI Red Team reasoner (uses API credits)
         required: true
         default: false
         type: boolean
-      archive_rejected:
-        description: Archive hard-rejected rows (requires apply_changes)
+      require_llm_rag:
+        description: Fail instead of using deterministic RAG when the model is unavailable
         required: true
         default: false
         type: boolean
@@ -77,22 +77,25 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt
-      - name: Run Eagle pipeline
+      - name: Run Eagle V4 report-only pipeline
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-          APPLY_CHANGES: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_changes || false }}
-          ARCHIVE_REJECTED: ${{ github.event_name == 'workflow_dispatch' && inputs.archive_rejected || false }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
+          APPLY_CHANGES: "false"
+          ARCHIVE_REJECTED: "false"
           MAX_ROWS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_rows || '' }}
           URL_CHECK_ENABLED: "true"
+          EAGLE_EVIDENCE_FILE: data/policy_evidence.json
+          RAG_USE_LLM: ${{ github.event_name == 'workflow_dispatch' && inputs.run_llm_rag || false }}
+          REQUIRE_LLM_RAG: ${{ github.event_name == 'workflow_dispatch' && inputs.require_llm_rag || false }}
         run: python -m eagle
-      - name: Upload Eagle report
+      - name: Upload Eagle reports and interruption checkpoint
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: eagle-report-${{ github.run_number }}
-          path: |
-            output/report.json
-            output/report.csv
+          path: output/
           if-no-files-found: warn
           retention-days: 14
