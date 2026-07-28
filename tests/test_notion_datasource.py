@@ -106,3 +106,22 @@ def test_schema_health_fails_before_silent_all_hold() -> None:
     assert "Car/Licence" in report["missing_promotion"]
     assert "Audit Status" in report["missing_promotion"]
     assert report["ready"] is False
+
+
+def test_current_final_db_schema_does_not_require_verification_level() -> None:
+    schema = {
+        "Opportunity": {"type": "title"},
+        "Apply URL": {"type": "url"},
+        "Location": {"type": "rich_text"},
+        "Freshness Days": {"type": "number"},
+        "Car/Licence": {"type": "select"},
+        "Accommodation": {"type": "select"},
+        "Second Visa": {"type": "select"},
+        "Audit Status": {"type": "select"},
+        "Evidence Grade": {"type": "select"},
+    }
+    report = schema_health(schema)
+    assert report["missing_fatal"] == []
+    assert report["missing_promotion"] == []
+    assert report["optional_missing"] == ["Verification Level"]
+    assert report["ready"] is True
