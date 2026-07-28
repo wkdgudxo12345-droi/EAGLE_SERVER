@@ -1,0 +1,82 @@
+name: Eagle V4 Live Verification
+
+on:
+  push:
+    branches:
+      - agent/eagle-v4-live-verification
+    paths:
+      - '.github/workflows/v4-live-verification.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eagle-v4-live-verification
+  cancel-in-progress: false
+
+jobs:
+  live-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - run: python -m compileall -q eagle main.py
+      - name: Run policy smoke test
+        run: python -m eagle.smoke
+      - name: Run 10-row live read-only verification
+        id: eagle
+        continue-on-error: true
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID || '2403ff84-448e-4b24-b30d-3ced754b5450' }}
+          NOTION_VERSION: '2026-03-11'
+          APPLY_CHANGES: 'false'
+          ARCHIVE_REJECTED: 'false'
+          STRICT_SCHEMA: 'true'
+          MAX_ROWS: '10'
+          URL_CHECK_ENABLED: 'true'
+          URL_CHECK_TIMEOUT_SECONDS: '12'
+          EAGLE_EVIDENCE_FILE: data/policy_evidence.json
+          RAG_USE_LLM: 'false'
+          REQUIRE_LLM_RAG: 'false'
+          RESUME_ENABLED: 'false'
+          STATE_DIR: state
+          OUTPUT_DIR: output
+          EAGLE_RUN_KEY: live-verification-${{ github.run_id }}
+          EAGLE_CODE_SHA: ${{ github.sha }}
+          SOFT_DEADLINE_SECONDS: '900'
+        run: |
+          mkdir -p output state
+          if [ -z "$NOTION_TOKEN" ]; then
+            echo 'NOTION_TOKEN secret is missing' | tee output/run.log
+            echo 'status=2' >> "$GITHUB_OUTPUT"
+            exit 2
+          fi
+          set +e
+          python -m eagle 2>&1 | tee output/run.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Upload live verification diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eagle-v4-live-verification-${{ github.run_id }}
+          path: |
+            output/
+            state/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Fail when live verification fails
+        if: steps.eagle.outcome == 'failure'
+        run: |
+          cat output/run.log || true
+          exit 1
