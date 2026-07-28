@@ -32,6 +32,9 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "Second Visa": ("Second Visa", "WHV/88 Days"),
     "Audit Status": ("Audit Status",),
     "Evidence Grade": ("Evidence Grade",),
+    # Optional legacy/Stage property. Individual URL verification is also
+    # established directly by the URL validator, so Final DB does not need this
+    # extra column merely to run the report-only server.
     "Verification Level": ("Verification Level",),
     "Vacancy Status": ("Vacancy Status",),
     "Operational Decision": ("Operational Decision", "Application Status"),
@@ -46,7 +49,6 @@ PROMOTION_SCHEMA_FIELDS = (
     "Second Visa",
     "Audit Status",
     "Evidence Grade",
-    "Verification Level",
 )
 
 
@@ -66,6 +68,8 @@ def schema_health(schema: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
     Missing title/URL fields make the run meaningless and are fatal. Missing
     promotion fields would silently turn the whole database into HOLD, so strict
     production mode rejects them before spending time checking hundreds of URLs.
+    Optional legacy fields are reported through resolved_aliases but do not block
+    a compatible existing Final DB.
     """
 
     names = set(schema)
@@ -83,6 +87,11 @@ def schema_health(schema: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "resolved_aliases": resolved,
         "missing_fatal": missing_fatal,
         "missing_promotion": missing_promotion,
+        "optional_missing": [
+            field
+            for field in ("Verification Level",)
+            if resolved.get(field) is None
+        ],
         "ready": not missing_fatal and not missing_promotion,
     }
 

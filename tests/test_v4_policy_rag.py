@@ -62,6 +62,25 @@ def test_verified_likely_role_can_pass_policy_and_rag() -> None:
     assert policy.promotion_allowed is True
 
 
+def test_final_db_without_verification_level_can_pass_from_runtime_proof() -> None:
+    record = base_record()
+    record["Verification Level"] = ""
+    rag, policy = evaluate(record)
+    assert rag.verdict == "PASS"
+    assert policy.proof_gate == "PASS"
+    assert policy.promotion_allowed is True
+
+
+def test_explicit_conflicting_verification_level_remains_hold() -> None:
+    record = base_record()
+    record["Verification Level"] = "Search page only"
+    rag, policy = evaluate(record)
+    assert rag.verdict == "PASS"
+    assert policy.proof_gate == "HOLD"
+    assert policy.promotion_allowed is False
+    assert any("conflicts" in reason for reason in policy.reasons)
+
+
 def test_unknown_second_visa_is_hold_not_false_no() -> None:
     record = base_record()
     record["Second Visa"] = "Unknown"
@@ -140,6 +159,7 @@ def test_existing_notion_schema_aliases_are_normalized() -> None:
     assert record["Second Visa"] == "Likely"
     assert record["WHV/88 Days"] == "Likely"
     assert record["Freshness"] == "3"
+    assert record["Verification Level"] == ""
 
 
 def test_required_llm_mode_fails_without_api_key(monkeypatch) -> None:
