@@ -28,6 +28,7 @@ jobs:
       - run: python -m compileall -q eagle main.py
       - run: python -m pytest -q
       - name: Run Eagle in read-only mode
+        id: eagle
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
@@ -35,24 +36,35 @@ jobs:
           ARCHIVE_REJECTED: 'false'
           URL_CHECK_ENABLED: 'true'
         run: |
+          mkdir -p output
           mode="$(tr -d '[:space:]' < .eagle/run-mode)"
           if [ "$mode" = "all" ]; then
             export MAX_ROWS=""
           else
             case "$mode" in
-              ''|*[!0-9]*) echo "Invalid run mode: $mode"; exit 2 ;;
+              ''|*[!0-9]*) echo "Invalid run mode: $mode" | tee output/run.log; echo 'status=2' >> "$GITHUB_OUTPUT"; exit 0 ;;
               *) export MAX_ROWS="$mode" ;;
             esac
           fi
-          echo "Eagle dry-run mode: ${MAX_ROWS:-all rows}"
-          python -m eagle
-      - name: Upload Eagle dry-run report
+          echo "Eagle dry-run mode: ${MAX_ROWS:-all rows}" | tee output/run.log
+          set +e
+          python -m eagle 2>&1 | tee -a output/run.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+      - name: Upload Eagle dry-run diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: eagle-execution-probe-${{ github.run_number }}
           path: |
+            output/run.log
             output/report.json
             output/report.csv
           if-no-files-found: warn
           retention-days: 14
+      - name: Fail when Eagle execution fails
+        if: steps.eagle.outputs.status != '0'
+        run: |
+          cat output/run.log
+          exit 1
