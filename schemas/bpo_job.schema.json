@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eagle.local/schemas/bpo_job.schema.json",
+  "title": "Eagle Korean BPO Job",
+  "type": "object",
+  "required": [
+    "Opportunity",
+    "Company",
+    "Country",
+    "Role Family",
+    "Source URL",
+    "Vacancy Status"
+  ],
+  "properties": {
+    "Opportunity": {"type": "string", "minLength": 1},
+    "Company": {"type": "string", "minLength": 1},
+    "Country": {"type": "string", "minLength": 1},
+    "City": {"type": ["string", "null"]},
+    "Role Family": {
+      "type": "string",
+      "enum": [
+        "Korean Customer Support",
+        "Korean Travel Operations",
+        "Reservations Operations",
+        "Customer Operations",
+        "Escalation",
+        "Quality Assurance",
+        "SME / Floor Support",
+        "Training",
+        "Workforce Management",
+        "Real-Time Operations",
+        "Partner Support",
+        "Vendor Operations",
+        "Customer Success Operations",
+        "Trust and Safety Operations",
+        "Content Operations",
+        "Operations Coordination",
+        "Other"
+      ]
+    },
+    "Seniority": {"type": ["string", "null"]},
+    "Korean Requirement": {
+      "type": "string",
+      "enum": ["Required", "Preferred", "Not stated", "Not required"]
+    },
+    "English Requirement": {"type": ["string", "null"]},
+    "Work Authorization": {
+      "type": "string",
+      "enum": [
+        "Candidate eligible",
+        "Sponsorship available",
+        "Local work rights required",
+        "Local nationals only",
+        "Unknown"
+      ]
+    },
+    "Candidate Eligible": {"type": ["boolean", "string", "null"]},
+    "Visa Sponsorship": {
+      "type": "string",
+      "enum": ["Yes", "No", "Available", "Unknown", "Not applicable"]
+    },
+    "Work Mode": {
+      "type": "string",
+      "enum": ["On-site", "Hybrid", "Remote", "Unknown"]
+    },
+    "Employment Type": {"type": ["string", "null"]},
+    "Shift Pattern": {"type": ["string", "null"]},
+    "Experience Requirement": {"type": ["string", "null"]},
+    "Salary": {"type": ["string", "null"]},
+    "Currency": {"type": ["string", "null"]},
+    "Source URL": {"type": "string", "format": "uri"},
+    "Source Type": {"type": ["string", "null"]},
+    "Posted Date": {"type": ["string", "null"], "format": "date"},
+    "Freshness Days": {"type": ["integer", "number", "string", "null"]},
+    "Vacancy Status": {
+      "type": "string",
+      "enum": ["Live", "Closed", "Expired", "Unknown", "Needs recheck"]
+    },
+    "Evidence Text": {"type": ["string", "null"]},
+    "Evidence Grade": {
+      "type": ["string", "null"],
+      "enum": ["A", "B", "C", "D", null]
+    },
+    "Career Transfer Score": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+    "Hiring Reality Score": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+    "Strategic Value Score": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+    "Final Priority Score": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+    "Red Team Verdict": {"type": ["string", "null"]},
+    "Apply Status": {"type": ["string", "null"]},
+    "CV Variant": {"type": ["string", "null"]},
+    "Hard Gate Reason": {"type": ["string", "null"]},
+    "Canonical Key": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}
