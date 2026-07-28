@@ -1,3 +1,5 @@
+require_visa_eligibility: true
+
 thresholds:
   fit_a: 82
   fit_b: 68
@@ -70,3 +72,4 @@ search_url_patterns:
   - seek.com.au/jobs
   - indeed.com/jobs
   - linkedin.com/jobs/search
+  - jora.com/
