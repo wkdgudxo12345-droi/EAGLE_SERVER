@@ -48,7 +48,13 @@ jobs:
           fi
           echo "Eagle dry-run mode: ${MAX_ROWS:-all rows}" | tee output/run.log
           set +e
-          python -m eagle 2>&1 | tee -a output/run.log
+          if [ -f .eagle/notion_snapshot.json ] && [ -f .eagle/offline_run.py ]; then
+            echo "Input source: Notion connector snapshot (read-only)" | tee -a output/run.log
+            python .eagle/offline_run.py 2>&1 | tee -a output/run.log
+          else
+            echo "Input source: Notion API via GitHub Secrets" | tee -a output/run.log
+            python -m eagle 2>&1 | tee -a output/run.log
+          fi
           status=${PIPESTATUS[0]}
           set -e
           echo "status=$status" >> "$GITHUB_OUTPUT"
