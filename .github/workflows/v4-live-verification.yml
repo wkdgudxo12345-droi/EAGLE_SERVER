@@ -6,12 +6,17 @@ on:
       - agent/eagle-v4-live-verification
     paths:
       - '.github/workflows/v4-live-verification.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/v4-live-verification.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: eagle-v4-live-verification
+  group: eagle-v4-live-verification-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
