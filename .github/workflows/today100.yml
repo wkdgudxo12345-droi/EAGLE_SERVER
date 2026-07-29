@@ -11,9 +11,11 @@ on:
       - 'eagle/today100.py'
       - 'eagle/today100_runner.py'
       - 'eagle/jora_today100.py'
+      - 'eagle/jora_card_today100.py'
       - 'eagle/whv_regions.py'
       - 'tests/test_today100.py'
       - 'tests/test_jora_today100.py'
+      - 'tests/test_jora_card_today100.py'
       - 'tests/test_cv_clusters.py'
       - '.github/workflows/today100.yml'
 
@@ -43,8 +45,9 @@ jobs:
           python -m pytest -q
           tests/test_today100.py
           tests/test_jora_today100.py
+          tests/test_jora_card_today100.py
           tests/test_cv_clusters.py
-      - name: Collect and audit today's vacancies from Jora detail pages
+      - name: Collect and audit today's vacancies from Jora cards and detail pages
         id: collector
         continue-on-error: true
         env:
@@ -52,11 +55,11 @@ jobs:
           TARGET_COUNT: '100'
           OUTPUT_DIR: output/today100
           REQUEST_TIMEOUT: '20'
-          REQUEST_DELAY: '0.18'
+          REQUEST_DELAY: '0.12'
         run: |
           mkdir -p output/today100
           set +e
-          python -m eagle.jora_today100 2>&1 | tee output/today100/run.log
+          python -m eagle.jora_card_today100 2>&1 | tee output/today100/run.log
           status=${PIPESTATUS[0]}
           set -e
           echo "status=$status" >> "$GITHUB_OUTPUT"
