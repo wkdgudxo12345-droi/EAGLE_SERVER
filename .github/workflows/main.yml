@@ -116,7 +116,7 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-          NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID }}
+          NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID || '2ca701ec-01ea-4dfb-864f-a2f7175e5e66' }}
           NOTION_VERSION: "2026-03-11"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
@@ -179,7 +179,7 @@ jobs:
       - name: Append verified candidates to Final DB
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          FINAL_NOTION_DATA_SOURCE_ID: ${{ secrets.FINAL_NOTION_DATA_SOURCE_ID }}
+          FINAL_NOTION_DATA_SOURCE_ID: ${{ secrets.FINAL_NOTION_DATA_SOURCE_ID || '2403ff84-448e-4b24-b30d-3ced754b5450' }}
           NOTION_VERSION: "2026-03-11"
           PROMOTION_CANDIDATES_FILE: audit-artifact/output/promotion_candidates.json
           PROMOTION_MANIFEST: output/promotion_manifest.json
