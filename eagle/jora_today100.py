@@ -38,7 +38,6 @@ SEARCHES = [
     "Farm-Hand", "Construction-Labourer", "Trade-Assistant",
 ]
 
-# High-yield combinations first; the loop stops after enough unique detail URLs.
 SEARCH_URLS = [
     f"https://au.jora.com/{query}-jobs-in-{location}?since=1&sort=date"
     for location in LOCATIONS
@@ -66,12 +65,29 @@ def _source_id(url: str) -> str:
     return match.group(1) if match else urlsplit(url).path.rsplit("/", 1)[-1]
 
 
-def _detail(session: requests.Session, url: str):
+def _detail(session: requests.Session, url: str, *, sample: bool = False):
     try:
         response = session.get(url, timeout=TIMEOUT, allow_redirects=True)
     except requests.RequestException:
         return None
     time.sleep(DELAY)
+    if sample:
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        (OUTPUT_DIR / "sample_detail.html").write_text(response.text, encoding="utf-8", errors="replace")
+        (OUTPUT_DIR / "sample_detail_meta.json").write_text(
+            json.dumps(
+                {
+                    "requested_url": url,
+                    "final_url": response.url,
+                    "status": response.status_code,
+                    "length": len(response.text),
+                    "content_type": response.headers.get("content-type", ""),
+                    "json_ld_count": len(list(today100._json_ld_objects(response.text))),
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
     if response.status_code != 200 or len(response.text) < 700:
         return None
     posting = today100._find_job_posting(response.text)
@@ -106,6 +122,7 @@ def main() -> int:
     today100.RUN_DATE = RUN_DATE
     today100._remote_tourism_postcode = remote_tourism_postcode
     today100._regional_industry_postcode = regional_industry_postcode
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     session = requests.Session()
     session.headers.update(
         {
@@ -115,12 +132,31 @@ def main() -> int:
     )
     detail_urls: list[str] = []
     diagnostics: list[dict[str, object]] = []
+    sample_search_written = False
     for base_url in SEARCH_URLS:
         for page in (1, 2):
             url = f"{base_url}&p={page}"
             try:
                 response = session.get(url, timeout=TIMEOUT)
                 time.sleep(DELAY)
+                if not sample_search_written:
+                    (OUTPUT_DIR / "sample_search.html").write_text(
+                        response.text, encoding="utf-8", errors="replace"
+                    )
+                    (OUTPUT_DIR / "sample_search_meta.json").write_text(
+                        json.dumps(
+                            {
+                                "url": url,
+                                "final_url": response.url,
+                                "status": response.status_code,
+                                "length": len(response.text),
+                                "content_type": response.headers.get("content-type", ""),
+                            },
+                            indent=2,
+                        ),
+                        encoding="utf-8",
+                    )
+                    sample_search_written = True
                 found = _job_links(response.text)
                 diagnostics.append({"url": url, "status": response.status_code, "links": len(found)})
                 detail_urls.extend(found)
@@ -135,7 +171,7 @@ def main() -> int:
     print(f"jora_detail_urls={len(detail_urls)}")
     records = []
     for index, url in enumerate(detail_urls, 1):
-        record = _detail(session, url)
+        record = _detail(session, url, sample=index == 1)
         if record is None:
             continue
         records.append(record)
@@ -146,12 +182,9 @@ def main() -> int:
         if len(records) >= TARGET_COUNT * 2:
             break
 
-    # Exact today first, then last 24h represented as one calendar-day difference.
     records.sort(key=today100._rank_key)
     selected = records[:TARGET_COUNT]
     today100._write(selected, diagnostics)
-    # Preserve source-specific raw set for audit.
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUTPUT_DIR / "jora_all_auditable.json").write_text(
         json.dumps([asdict(row) for row in records], ensure_ascii=False, indent=2), encoding="utf-8"
     )
