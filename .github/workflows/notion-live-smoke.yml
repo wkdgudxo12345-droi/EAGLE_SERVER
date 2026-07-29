@@ -23,11 +23,10 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt
-      - name: Verify GitHub secrets and read existing Notion source
+      - name: Verify GitHub token and read existing Notion source
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-          NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID }}
+          NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID || '2ca701ec-01ea-4dfb-864f-a2f7175e5e66' }}
           NOTION_VERSION: "2026-03-11"
           STRICT_SCHEMA: "true"
           MAX_ROWS: "5"
