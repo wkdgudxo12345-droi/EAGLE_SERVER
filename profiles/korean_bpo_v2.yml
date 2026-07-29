@@ -1,0 +1,96 @@
+profile:
+  id: korean_bpo_v2
+  name: Korean BPO Eagle V2
+  version: 2
+  purpose: >-
+    Prioritize current Korean-language BPO and operations vacancies for a candidate
+    with 3 years 4 months on the IGT Solutions Agoda account. The model gives the
+    highest weight to estimated hiring probability and salary, while treating visa
+    uncertainty as a lower-weight research item.
+
+candidate:
+  nationality: Korean
+  korean_level: Native
+  english_level: B1-B2
+  total_bpo_years: 3.333
+  employer_context: IGT Solutions - Agoda Project
+  verified_strengths:
+    - hotel and flight operations
+    - reservations, refunds and reissues
+    - overbooking and supplier negotiation
+    - escalation handling
+    - quality assurance
+    - SME and floor support
+    - new-hire coaching
+    - KPI and SLA operations
+  evidence:
+    cases_per_day: 50-80
+    sla: 95%+
+    team_performance: rank 1
+    quality: lowest DSAT and zero fatal errors
+    new_hires_supported: 15+
+
+weights:
+  final:
+    hiring_probability: 35
+    salary: 30
+    career_fit: 20
+    english_feasibility: 10
+    visa: 5
+  hiring_probability:
+    role_match: 42
+    seniority_fit: 18
+    english_feasibility: 18
+    freshness: 12
+    source_confidence: 10
+
+salary_bands_myr_monthly:
+  undisclosed_score: 42
+  bands:
+    - minimum: 12000
+      score: 100
+    - minimum: 10500
+      score: 92
+    - minimum: 9500
+      score: 82
+    - minimum: 8500
+      score: 72
+    - minimum: 7500
+      score: 60
+    - minimum: 6500
+      score: 48
+    - minimum: 5500
+      score: 35
+    - minimum: 0
+      score: 20
+
+visa_scores:
+  supported: 95
+  available: 90
+  unknown: 50
+  no: 10
+  local_only: 0
+
+thresholds:
+  apply_first: 75
+  apply: 65
+  verify_hold: 55
+
+hard_gates:
+  reject_statuses:
+    - closed
+    - expired
+    - filled
+    - cancelled
+  reject_terms:
+    - unpaid
+    - volunteer only
+    - commission only
+  reject_local_only: true
+
+cv_variants:
+  - BPO Operations & SME
+  - Customer & Travel Support
+  - Shared Services & Order Management
+  - Content & Platform Operations
+  - Partner & Customer Success
