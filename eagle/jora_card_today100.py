@@ -46,15 +46,67 @@ SEARCH_URLS = [
     for query in SEARCHES
 ]
 
+PLANT_TITLE_TERMS = (
+    "farm hand", "farm worker", "stationhand", "station hand", "harvest",
+    "fruit picker", "vegetable", "meat process", "food process",
+    "process worker", "production worker", "packer", "packing shed",
+    "poultry", "dairy", "seafood", "abattoir", "mill labourer",
+)
+CONSTRUCTION_TITLE_TERMS = (
+    "construction", "civil labour", "civil worker", "labourer", "trade assistant",
+    "concreter", "formworker", "scaffolder", "carpenter", "bricklayer",
+)
+MINING_TITLE_TERMS = (
+    "mining", "miner", "drill", "driller", "offsider", "dump truck",
+    "haul truck", "excavator operator", "underground", "fixed plant",
+    "blast crew", "shutdown", "mine site utility",
+)
+TOURISM_TITLE_TERMS = (
+    "guest service", "receptionist", "front office", "hotel", "resort",
+    "hostel", "housekeeping", "room attendant", "kitchen hand",
+    "food and beverage", "waiter", "waitstaff", "bar attendant",
+    "hospitality", "all-rounder", "all rounder", "lodge", "roadhouse",
+    "night auditor", "reservations agent", "accommodation attendant",
+)
+TOURISM_CONTEXT_TERMS = (
+    "hotel", "resort", "hostel", "lodge", "roadhouse", "village",
+    "accommodation", "tourism", "hospitality", "guest rooms",
+)
+
 
 def _canonical_url(url: str) -> str:
     parts = urlsplit(url)
-    return urlunsplit((parts.scheme or "https", parts.netloc or "au.jora.com", parts.path, "", ""))
+    return urlunsplit(
+        (parts.scheme or "https", parts.netloc or "au.jora.com", parts.path, "", "")
+    )
 
 
 def _source_id(url: str) -> str:
     match = re.search(r"-([0-9a-f]{24,40})$", urlsplit(url).path, flags=re.I)
     return match.group(1) if match else urlsplit(url).path.rsplit("/", 1)[-1]
+
+
+def _strict_industry(title: str, description: str) -> str:
+    """Classify only direct specified-work duties, never local-area prose.
+
+    A medical or office role located in a mining town is not mining work. The
+    role title must directly identify the specified industry, with a narrow
+    cleaner exception when the employer context is clearly accommodation based.
+    """
+
+    heading = title.lower()
+    body = description.lower()
+    if any(term in heading for term in PLANT_TITLE_TERMS):
+        return "Plant/Animal or Food Processing"
+    if any(term in heading for term in CONSTRUCTION_TITLE_TERMS):
+        return "Construction"
+    if any(term in heading for term in MINING_TITLE_TERMS):
+        return "Mining"
+    if any(term in heading for term in TOURISM_TITLE_TERMS):
+        return "Tourism/Hospitality"
+    if "cleaner" in heading and any(term in body for term in TOURISM_CONTEXT_TERMS):
+        return "Tourism/Hospitality"
+    return "Other/Unverified"
 
 
 class _JoraSearchCardParser(HTMLParser):
@@ -107,7 +159,9 @@ class _JoraSearchCardParser(HTMLParser):
         if self.current is None:
             return
         if tag == "a" and "job-link" in classes and not self.current.get("url"):
-            self.current["url"] = _canonical_url(urljoin("https://au.jora.com", values.get("href", "")))
+            self.current["url"] = _canonical_url(
+                urljoin("https://au.jora.com", values.get("href", ""))
+            )
             if not self.current.get("title"):
                 self.capture = "title"
                 self.buffer = []
@@ -162,23 +216,29 @@ def _enrich_or_fallback(session: requests.Session, card: dict[str, str]):
     company = card["company"]
     location = card["location"]
     description = card.get("description", "")
-    listed = card["listed"]
+    card_listed = card["listed"]
+    detail_listed = ""
     detail_quality = "search-card"
 
     if status == 200 and len(detail_html) >= 700:
         parser = _JoraDetailParser()
         parser.feed(detail_html)
+        detail_listed = parser.listed
         if parser.title and parser.company and parser.location and len(parser.description) >= 80:
             title = today100._clean_text(parser.title)
             company = today100._clean_text(parser.company)
             location = today100._clean_text(parser.location)
             description = today100._clean_text(parser.description)
-            listed = parser.listed or listed
             detail_quality = "detail-page"
 
     if not description:
         description = f"Jora listing for {title} at {company} in {location}."
-    date_posted = _relative_posted_date(listed)
+
+    # The a=24h search card is the current publication evidence. A 429/403/5xx
+    # detail response means the aggregator rate-limited verification, not that the
+    # vacancy closed. Only an explicit 404/410 is treated as a closed detail URL.
+    effective_status = status if status in {404, 410} else 200
+    date_posted = _relative_posted_date(card_listed)
     record = today100._classify(
         title=title,
         company=company,
@@ -187,20 +247,29 @@ def _enrich_or_fallback(session: requests.Session, card: dict[str, str]):
         url=url,
         source_id=card["source_id"],
         date_posted=date_posted,
-        status_code=status if status else 200,
+        status_code=effective_status,
     )
     record.source = "JORA"
     record.source_job_id = f"JORA:{card['source_id']}"
     record.apply_url = url
     record.today_evidence = (
-        f"Jora a=24h search; listed-date={listed}; evidence={detail_quality}; "
-        f"detail-http={status or 'request-error'}"
+        f"Jora a=24h search; card-listed={card_listed}; "
+        f"detail-listed={detail_listed or 'unavailable'}; "
+        f"evidence={detail_quality}; detail-http={status or 'request-error'}"
     )
-    if detail_quality == "search-card" and record.evidence_grade == "A":
+
+    if detail_quality == "search-card":
         record.evidence_grade = "B"
-        if record.audit_status == "VERIFIED":
-            record.audit_status = "RECHECK"
+        record.audit_status = "RECHECK"
+        if record.decision == "APPLY NOW":
             record.decision = "VERIFY THEN APPLY"
+        note = (
+            "confirm the full employer advertisement, paid hours, exact worksite, "
+            "required tickets and car-free transport or staff accommodation before relocation"
+        )
+        record.final_recommendation = "; ".join(
+            item for item in (record.final_recommendation, note) if item
+        )
     return record
 
 
@@ -208,6 +277,7 @@ def main() -> int:
     today100.RUN_DATE = RUN_DATE
     today100._remote_tourism_postcode = remote_tourism_postcode
     today100._regional_industry_postcode = regional_industry_postcode
+    today100._industry = _strict_industry
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     session = requests.Session()
     session.headers.update(
