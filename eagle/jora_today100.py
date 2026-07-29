@@ -8,7 +8,7 @@ from dataclasses import asdict
 from datetime import date, timedelta
 from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import quote_plus, urljoin, urlsplit, urlunsplit
 
 import requests
 
@@ -22,26 +22,30 @@ TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "20"))
 DELAY = float(os.getenv("REQUEST_DELAY", "0.18"))
 
 LOCATIONS = [
-    "Darwin-NT", "Northern-Territory", "Alice-Springs-NT", "Katherine-NT",
-    "Cairns-QLD", "Cairns-City-QLD", "Port-Douglas-QLD", "Townsville-QLD",
-    "Mackay-QLD", "Mount-Isa-QLD", "Broome-WA", "Karratha-WA",
-    "Port-Hedland-WA", "Newman-WA", "Kalgoorlie-WA", "Esperance-WA",
-    "Tasmania-TAS", "Hobart-TAS", "Launceston-TAS", "Port-Lincoln-SA",
-    "Kangaroo-Island-SA", "Coober-Pedy-SA",
+    "Darwin NT", "Northern Territory", "Alice Springs NT", "Katherine NT",
+    "Cairns QLD", "Cairns City QLD", "Port Douglas QLD", "Townsville QLD",
+    "Mackay QLD", "Mount Isa QLD", "Broome WA", "Karratha WA",
+    "Port Hedland WA", "Newman WA", "Kalgoorlie WA", "Esperance WA",
+    "Tasmania TAS", "Hobart TAS", "Launceston TAS", "Port Lincoln SA",
+    "Kangaroo Island SA", "Coober Pedy SA",
 ]
 
 SEARCHES = [
-    "Hospitality", "Hotel", "Guest-Service", "Receptionist", "Front-Office",
-    "Reservations", "Housekeeping", "Room-Attendant", "Kitchen-Hand",
-    "Food-And-Beverage", "Hospitality-All-Rounder", "Cleaner",
-    "Site-Administrator", "Operations-Administrator", "Project-Support",
-    "Accommodation-Officer", "Village-Services", "Utility-All-Rounder",
-    "Food-Processing", "Production-Worker", "Process-Worker", "Warehouse",
-    "Farm-Hand", "Construction-Labourer", "Trade-Assistant",
+    "Hospitality", "Hotel", "Guest Service", "Receptionist", "Front Office",
+    "Reservations", "Housekeeping", "Room Attendant", "Kitchen Hand",
+    "Food And Beverage", "Hospitality All Rounder", "Cleaner",
+    "Site Administrator", "Operations Administrator", "Project Support",
+    "Accommodation Officer", "Village Services", "Utility All Rounder",
+    "Food Processing", "Production Worker", "Process Worker", "Warehouse",
+    "Farm Hand", "Construction Labourer", "Trade Assistant",
 ]
 
+# Jora's current UI uses a=24h for Listed date -> Last 24 hours and st=date
+# for date sorting. The previously used since=1 parameter controls personalised
+# freshness state and does not enforce posting age.
 SEARCH_URLS = [
-    f"https://au.jora.com/{query}-jobs-in-{location}?since=1&sort=date"
+    "https://au.jora.com/j?"
+    f"l={quote_plus(location)}&q={quote_plus(query)}&a=24h&st=date"
     for location in LOCATIONS
     for query in SEARCHES
 ]
@@ -185,7 +189,7 @@ def _detail(session: requests.Session, url: str):
     record.source = "JORA"
     record.source_job_id = f"JORA:{source_id}"
     record.apply_url = url
-    record.today_evidence = f"Jora listed-date={parser.listed}; since=1 search filter"
+    record.today_evidence = f"Jora listed-date={parser.listed}; a=24h search filter"
     return record
 
 
@@ -205,7 +209,8 @@ def main() -> int:
     diagnostics: list[dict[str, object]] = []
     for base_url in SEARCH_URLS:
         for page in (1, 2):
-            url = f"{base_url}&p={page}"
+            separator = "&" if "?" in base_url else "?"
+            url = f"{base_url}{separator}p={page}"
             try:
                 response = session.get(url, timeout=TIMEOUT)
                 time.sleep(DELAY)
