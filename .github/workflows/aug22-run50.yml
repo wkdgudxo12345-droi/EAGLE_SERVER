@@ -112,19 +112,22 @@ jobs:
               )
           PY
 
-      - name: Score, deduplicate and synchronize Final DB
+      - name: Score, deduplicate and synchronize Final DB lifecycle
         if: steps.notion_preflight.outputs.valid == 'true'
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           FINAL_NOTION_DATA_SOURCE_ID: ${{ secrets.FINAL_NOTION_DATA_SOURCE_ID || '2403ff84-448e-4b24-b30d-3ced754b5450' }}
           NOTION_VERSION: "2026-03-11"
           EAGLE_CONFIG: config/scoring_aug22_2026.yml
+          EAGLE_CRAWL_CONFIG: config/crawl_aug22_2026.yml
           CRAWL_REPORT: output/crawl/crawl_report.json
           OUTPUT_DIR: output/final_sync
           MAX_FINAL_ROWS: ${{ env.MAX_FINAL_ROWS }}
           MAX_EXISTING_RECHECKS: "100"
+          STALE_AFTER_DAYS: "14"
+          PIPELINE_RUN_ID: EAGLE-${{ github.run_id }}-${{ github.run_attempt }}
           APPLY_CHANGES: "true"
-        run: python -m eagle.final_sync
+        run: python -m eagle.pipeline_loop
 
       - name: Write cycle status
         if: always()
@@ -144,7 +147,7 @@ jobs:
               json.dumps(
                   {
                       "run_at": datetime.now(timezone.utc).isoformat(),
-                      "cycle": "collect -> gate -> score -> deduplicate -> Final DB -> close stale URLs",
+                      "cycle": "collect -> live URL gate -> score -> deduplicate -> Final DB lifecycle -> close/stale maintenance",
                       "raw_limit": int(os.getenv("MAX_NEW_ROWS", "50")),
                       "final_limit": int(os.getenv("MAX_FINAL_ROWS", "15")),
                       "candidate_work_rights": os.getenv(
@@ -153,6 +156,7 @@ jobs:
                       "notion_sync_attempted": os.getenv("NOTION_VALID") == "true",
                       "notion_preflight": os.getenv("NOTION_REASON", "not run"),
                       "protected_apply_statuses": ["APPLIED", "INTERVIEW"],
+                      "lifecycle": ["NEW", "ACTIVE", "STALE", "CLOSED"],
                       "scheduled_local_time": "17:00 Asia/Kuala_Lumpur",
                   },
                   indent=2,
