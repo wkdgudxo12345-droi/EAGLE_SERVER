@@ -117,11 +117,18 @@ def _is_individual_url(url: str, patterns: list[str]) -> bool:
     return bool(normalized) and not _contains_any(normalized.lower(), patterns)
 
 
+def _matches_normalized(value: str, terms: list[str]) -> list[str]:
+    normalized = _normalized_match_text(value)
+    return [term for term in terms if _normalized_match_text(term) in normalized]
+
+
 def score(
     record: dict[str, Any], config: dict[str, Any], live: bool | None
 ) -> ScoreResult:
     text = _text(record)
     normalized_text = _normalized_match_text(text)
+    title_text = str(record.get("Opportunity") or record.get("Role Family") or "")
+    evidence_text = str(record.get("Evidence Text") or "")
     thresholds = config.get("thresholds", {})
     weights = config.get("weights", {})
     hard_terms = [str(term).lower() for term in config.get("hard_reject_terms", [])]
@@ -133,6 +140,14 @@ def score(
     search_patterns = [
         str(term).lower() for term in config.get("search_url_patterns", [])
     ]
+    overlevel_terms = [str(term).lower() for term in config.get("overlevel_title_terms", [])]
+    credentialled_terms = [str(term).lower() for term in config.get("credentialled_title_terms", [])]
+    management_evidence_terms = [
+        str(term).lower() for term in config.get("management_evidence_terms", [])
+    ]
+    credential_evidence_terms = [
+        str(term).lower() for term in config.get("credential_evidence_terms", [])
+    ]
 
     reasons: list[str] = []
     matched_hard_terms = [
@@ -143,6 +158,22 @@ def score(
     hard_gate = bool(matched_hard_terms)
     if matched_hard_terms:
         reasons.append(f"hard gate: {', '.join(matched_hard_terms[:3])}")
+
+    matched_overlevel = _matches_normalized(title_text, overlevel_terms)
+    has_management_evidence = bool(_matches_normalized(evidence_text, management_evidence_terms))
+    level_mismatch = bool(matched_overlevel and not has_management_evidence)
+    if level_mismatch:
+        reasons.append(
+            f"level mismatch: {', '.join(matched_overlevel[:2])} without direct-report, budget or people-management evidence"
+        )
+
+    matched_credentialled = _matches_normalized(title_text, credentialled_terms)
+    has_credential_evidence = bool(_matches_normalized(evidence_text, credential_evidence_terms))
+    credential_mismatch = bool(matched_credentialled and not has_credential_evidence)
+    if credential_mismatch:
+        reasons.append(
+            f"credential-sensitive role: {', '.join(matched_credentialled[:2])} without matching Australian credential evidence"
+        )
 
     car_value = str(record.get("Car/Licence") or "").lower()
     if "required" in car_value and "not required" not in car_value:
@@ -175,6 +206,13 @@ def score(
         experience_terms,
         floor=45.0 if record.get("Evidence Text") else 25.0,
     )
+    if level_mismatch:
+        role_match = min(role_match, 35.0)
+        experience = min(experience, 40.0)
+    if credential_mismatch:
+        role_match = min(role_match, 30.0)
+        experience = min(experience, 35.0)
+
     no_car = (
         100.0
         if any(term in car_value for term in ("not required", "no licence"))
@@ -220,6 +258,11 @@ def score(
             "escalation",
             "qa",
             "training",
+            "data entry",
+            "documentation",
+            "weighbridge",
+            "grain sampling",
+            "food safety",
         ],
         floor=35.0,
     )
@@ -231,6 +274,10 @@ def score(
     )
     location_commitment = 75.0 if record.get("Region") else 40.0
     requirements = 0.0 if hard_gate else 85.0
+    if level_mismatch:
+        requirements = min(requirements, 25.0)
+    if credential_mismatch:
+        requirements = min(requirements, 15.0)
     hr = _weighted(
         {
             "direct_experience": direct_experience,
@@ -242,6 +289,10 @@ def score(
         },
         weights.get("hr", {}),
     )
+    if level_mismatch:
+        hr = min(hr, 54.0)
+    if credential_mismatch:
+        hr = min(hr, 50.0)
 
     evidence_quality = min(
         100.0,
@@ -275,6 +326,9 @@ def score(
     if hard_gate:
         fit = "Reject"
         verdict = "DELETE CANDIDATE"
+    elif level_mismatch or credential_mismatch:
+        fit = "C"
+        verdict = "RECHECK"
     elif live is not True or not individual_url:
         fit = "C"
         verdict = "RECHECK"
