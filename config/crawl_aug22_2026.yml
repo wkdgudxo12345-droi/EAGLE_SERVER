@@ -13,6 +13,7 @@ sources:
     company: GrainCorp
     route: grain
     official: true
+    emit_page: true
     url: https://jobs.graincorp.com.au/job/Various-Locations-2026-GrainCorp-Harvest-Casual-Intake-All/1363615866/
   - id: bunge_viterra_harvest
     company: Bunge / Viterra
@@ -23,11 +24,13 @@ sources:
     company: Bunge / Viterra
     route: grain
     official: true
+    emit_page: true
     url: https://bunge.bigredsky.com/page.php?AdvertID=918201&pageID=160&windowUID=0
   - id: bunge_wa_harvest
     company: Bunge / Viterra
     route: grain
     official: true
+    emit_page: true
     url: https://bunge.bigredsky.com/page.php?AdvertID=918182&pageID=160&windowUID=0
   - id: seek_grain_sampler
     company: SEEK market search
