@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       max_new_rows:
-        description: Number of newest target vacancies to score from Stage 1
+        description: Maximum grain and food operations vacancies to retain
         required: true
         default: "50"
         type: string
@@ -16,30 +16,29 @@ on:
         options:
           - application_in_progress
           - granted
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/aug22-run50.yml
 
 permissions:
   contents: read
 
 concurrency:
   group: eagle-aug22-run50
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  validate-and-rescore:
+  crawl-and-rescore:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
+
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt
+
       - name: Compile and run regression tests
         env:
           PYTHONPATH: ${{ github.workspace }}
@@ -47,7 +46,58 @@ jobs:
           python -m compileall -q eagle
           python -m pytest -q
 
+      - name: Prepare output directories
+        run: mkdir -p output/crawl output/final_rescore output/run50
+
+      - name: Crawl official grain and keyword food-operation sources
+        env:
+          EAGLE_CRAWL_CONFIG: config/crawl_aug22_2026.yml
+          MAX_ROWS: ${{ inputs.max_new_rows }}
+          OUTPUT_DIR: output/crawl
+        run: python -m eagle.target_crawl
+
+      - name: Validate Notion token without failing the crawl
+        id: notion_preflight
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          FINAL_SOURCE_ID: ${{ secrets.FINAL_NOTION_DATA_SOURCE_ID || '2403ff84-448e-4b24-b30d-3ced754b5450' }}
+          NOTION_VERSION: "2026-03-11"
+        run: |
+          python - <<'PY'
+          import os
+          import requests
+
+          token = os.getenv("NOTION_TOKEN", "").strip()
+          source_id = os.getenv("FINAL_SOURCE_ID", "").replace("-", "").strip()
+          valid = False
+          reason = "NOTION_TOKEN secret is missing"
+
+          if token and source_id:
+              try:
+                  response = requests.get(
+                      f"https://api.notion.com/v1/data_sources/{source_id}",
+                      headers={
+                          "Authorization": f"Bearer {token}",
+                          "Notion-Version": os.getenv("NOTION_VERSION", "2026-03-11"),
+                      },
+                      timeout=15,
+                  )
+                  valid = response.status_code == 200
+                  reason = f"Notion preflight HTTP {response.status_code}"
+              except requests.RequestException as exc:
+                  reason = f"Notion preflight request failed: {exc}"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"valid={'true' if valid else 'false'}\n")
+              handle.write(f"reason={reason}\n")
+
+          print(reason)
+          if not valid:
+              print("::warning::Notion rescore skipped. Replace the repository NOTION_TOKEN secret, then run this workflow manually again.")
+          PY
+
       - name: Recalculate existing Final DB under AUG22 model
+        if: steps.notion_preflight.outputs.valid == 'true'
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           SOURCE_NOTION_DATA_SOURCE_ID: ${{ secrets.FINAL_NOTION_DATA_SOURCE_ID || '2403ff84-448e-4b24-b30d-3ced754b5450' }}
@@ -61,6 +111,7 @@ jobs:
         run: python -m eagle.aug22_run
 
       - name: Select 50 target records from Stage 1
+        if: steps.notion_preflight.outputs.valid == 'true'
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           SOURCE_NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID || '2ca701ec-01ea-4dfb-864f-a2f7175e5e66' }}
@@ -68,16 +119,44 @@ jobs:
           EAGLE_CONFIG: config/scoring_aug22_2026.yml
           AUSTRALIA_ARRIVAL_DATE: "2026-08-15"
           AVAILABLE_START_DATE: "2026-08-22"
-          MAX_ROWS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_new_rows || '50' }}
+          MAX_ROWS: ${{ inputs.max_new_rows }}
           URL_CHECK_ENABLED: "true"
           OUTPUT_DIR: output/run50
         run: python -m eagle.aug22_run
 
-      - name: Upload AUG22 score reports
+      - name: Write run status
+        if: always()
+        env:
+          NOTION_VALID: ${{ steps.notion_preflight.outputs.valid }}
+          NOTION_REASON: ${{ steps.notion_preflight.outputs.reason }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("output/workflow_status.json")
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(
+              json.dumps(
+                  {
+                      "official_and_keyword_crawl_attempted": True,
+                      "notion_rescore_attempted": os.getenv("NOTION_VALID") == "true",
+                      "notion_preflight": os.getenv("NOTION_REASON", "not run"),
+                      "arrival_date": "2026-08-15",
+                      "available_start_date": "2026-08-22",
+                  },
+                  indent=2,
+              ),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload AUG22 crawl and score reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: eagle-aug22-run50-${{ github.run_id }}-${{ github.run_attempt }}
           path: output/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
