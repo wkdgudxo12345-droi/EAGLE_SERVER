@@ -1,0 +1,54 @@
+run_label: MALAYSIA-KOREAN-CAREER-V3
+country: Malaysia
+max_raw_candidates: 100
+max_shortlist: 20
+report_top: 5
+freshness_days: 14
+paid_crawlers_allowed: false
+
+search_tracks:
+  - id: crypto_exchange_ops
+    industries: [crypto, blockchain, digital assets, fintech]
+    keywords:
+      - Korean customer support
+      - Korean customer operations
+      - Korean user operations
+      - Korean VIP support
+      - Korean investigations operations
+      - Korean KYC AML operations
+    priority_companies: [OKX, Bitget, Bybit, Binance, Crypto.com]
+  - id: fintech_risk_ops
+    industries: [fintech, payments, banking technology]
+    keywords:
+      - Korean transaction operations
+      - Korean fraud operations
+      - Korean compliance operations
+      - Korean client operations
+      - Korean onboarding analyst
+    priority_companies: [OSTTRA, Standard Chartered, American Express, Cisco]
+  - id: travel_platform_ops
+    industries: [travel, OTA, technology platform]
+    keywords:
+      - Korean travel operations
+      - Korean service recovery
+      - Korean reservations operations
+      - Korean partner support
+    priority_companies: [Agoda, Trip.com, Klook]
+  - id: premium_bpo_upgrade
+    industries: [BPO, shared services]
+    keywords:
+      - Korean team lead customer service
+      - Korean quality analyst
+      - Korean trainer
+      - Korean SME
+      - Korean senior customer service
+    minimum_salary_myr: 8000
+
+source_priority:
+  - official_careers
+  - linkedin_individual_job
+  - jobstreet_individual_job
+  - indeed_individual_job
+
+exclude_companies_by_default:
+  - IGT Solutions
