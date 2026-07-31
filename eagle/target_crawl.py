@@ -44,9 +44,10 @@ class PageParser(HTMLParser):
             self._in_h1 = True
 
     def handle_endtag(self, tag: str) -> None:
-        if tag == "a" and self._href:
-            text = _clean(" ".join(self._anchor_parts))
-            self.links.append(Link(text=text, url=self._href.strip()))
+        if tag == "a":
+            if self._href:
+                text = _clean(" ".join(self._anchor_parts))
+                self.links.append(Link(text=text, url=self._href.strip()))
             self._href = None
             self._anchor_parts = []
         elif tag == "title":
@@ -210,7 +211,11 @@ def run() -> int:
             ]
         )
         page_matches = _route_matches(route, f"{source_context} {page_text}", config)
-        page_candidates = [Link(text=page_title or _clean(source.get("id")), url=resolved_url)] if page_matches else []
+        page_candidates = (
+            [Link(text=page_title or _clean(source.get("id")), url=resolved_url)]
+            if bool(source.get("emit_page")) and page_matches
+            else []
+        )
 
         for link in links:
             if not _job_like(link.url, link.text):
