@@ -1,0 +1,156 @@
+run_label: RUN50-AUG22-GRAIN-FOOD-20260731
+max_rows: 50
+timeout_seconds: 15
+user_agent: Mozilla/5.0 (compatible; EagleJobIntelligence/4.1; +https://github.com/wkdgudxo12345-droi/EAGLE_SERVER)
+
+sources:
+  - id: cbh_vacancies
+    company: CBH Group
+    route: grain
+    official: true
+    url: https://careers.cbh.com.au/go/Vacancies/516510/
+  - id: graincorp_harvest_2026
+    company: GrainCorp
+    route: grain
+    official: true
+    url: https://jobs.graincorp.com.au/job/Various-Locations-2026-GrainCorp-Harvest-Casual-Intake-All/1363615866/
+  - id: bunge_viterra_harvest
+    company: Bunge / Viterra
+    route: grain
+    official: true
+    url: https://bunge.com/Australia/Harvest-jobs
+  - id: bunge_sa_vic_harvest
+    company: Bunge / Viterra
+    route: grain
+    official: true
+    url: https://bunge.bigredsky.com/page.php?AdvertID=918201&pageID=160&windowUID=0
+  - id: bunge_wa_harvest
+    company: Bunge / Viterra
+    route: grain
+    official: true
+    url: https://bunge.bigredsky.com/page.php?AdvertID=918182&pageID=160&windowUID=0
+  - id: seek_grain_sampler
+    company: SEEK market search
+    route: grain
+    official: false
+    url: https://www.seek.com.au/grain-sampler-jobs
+  - id: seek_weighbridge
+    company: SEEK market search
+    route: grain
+    official: false
+    url: https://www.seek.com.au/weighbridge-operator-jobs
+  - id: seek_meat_qa
+    company: SEEK market search
+    route: food
+    official: false
+    url: https://www.seek.com.au/meat-processing-quality-assurance-jobs
+  - id: seek_food_qc
+    company: SEEK market search
+    route: food
+    official: false
+    url: https://www.seek.com.au/food-manufacturing-quality-control-jobs
+  - id: seek_food_despatch
+    company: SEEK market search
+    route: food
+    official: false
+    url: https://www.seek.com.au/food-manufacturing-despatch-jobs
+  - id: seek_food_admin
+    company: SEEK market search
+    route: food
+    official: false
+    url: https://www.seek.com.au/food-manufacturing-administration-jobs
+
+grain_terms:
+  - harvest employment
+  - harvest casual
+  - receival point operator
+  - receival operator
+  - grain sampler
+  - grain sampling
+  - grain classifier
+  - grain classification
+  - grain quality
+  - weighbridge
+  - laboratory technician
+  - laboratory support
+  - data entry
+  - call centre operator
+  - grid operations
+
+food_industry_terms:
+  - meat processing
+  - meat processor
+  - abattoir
+  - food manufacturing
+  - food production
+  - poultry
+  - beef
+  - pork
+  - seafood processing
+  - cold store
+
+food_function_terms:
+  - quality assurance
+  - quality control
+  - qa assistant
+  - qa officer
+  - qc assistant
+  - qc officer
+  - food safety
+  - haccp
+  - despatch
+  - dispatch
+  - administration
+  - administrator
+  - admin
+  - data entry
+  - inventory
+  - documentation
+
+working_holiday_terms:
+  - working holiday
+  - subclass 417
+  - 417 visa
+  - 88 days
+  - second year visa
+  - second-year working holiday
+
+closed_terms:
+  - position has been filled
+  - applications are closed
+  - applications have closed
+  - vacancy is no longer available
+  - job is no longer available
+  - no longer accepting applications
+
+hard_reject_terms:
+  - unrestricted drivers licence
+  - unrestricted driver's licence
+  - valid drivers licence with own reliable vehicle
+  - valid driver's licence with own reliable vehicle
+  - must have own vehicle
+  - own reliable vehicle required
+  - australian citizenship required
+  - australian citizen only
+  - permanent resident only
+  - unrestricted australian working rights
+  - no visa sponsorship
+  - unpaid volunteer
+
+transport_risk_terms:
+  - own transport required
+  - arrange your own transport
+  - applicants are required to organise their own accommodation and transport
+  - travel between sites
+
+positive_terms:
+  - no experience required
+  - no experience needed
+  - full training provided
+  - training provided
+  - accommodation available
+  - accommodation provided
+  - available on site
+  - working holiday
+  - second-year working holiday
+  - subclass 417
