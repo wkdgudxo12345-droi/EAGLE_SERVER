@@ -1,15 +1,23 @@
-name: Eagle AUG22 RUN50
+name: Eagle Final DB Daily Loop
 
 on:
+  schedule:
+    # 09:00 UTC = 17:00 Asia/Kuala_Lumpur
+    - cron: "0 9 * * *"
   workflow_dispatch:
     inputs:
       max_new_rows:
-        description: Maximum grain and food operations vacancies to retain
+        description: Maximum raw vacancies retained from each crawl cycle
         required: true
         default: "50"
         type: string
+      max_final_rows:
+        description: Maximum verified finalists written to Final DB per cycle
+        required: true
+        default: "15"
+        type: string
       candidate_work_rights:
-        description: Australian work-rights state
+        description: Australian work-rights state for the run record
         required: true
         default: application_in_progress
         type: choice
@@ -21,11 +29,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: eagle-aug22-run50
+  group: eagle-final-db-daily-loop
   cancel-in-progress: true
 
+env:
+  MAX_NEW_ROWS: ${{ github.event.inputs.max_new_rows || '50' }}
+  MAX_FINAL_ROWS: ${{ github.event.inputs.max_final_rows || '15' }}
+  CANDIDATE_WORK_RIGHTS: ${{ github.event.inputs.candidate_work_rights || 'application_in_progress' }}
+
 jobs:
-  crawl-and-rescore:
+  crawl-score-sync-maintain:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -47,16 +60,16 @@ jobs:
           python -m pytest -q
 
       - name: Prepare output directories
-        run: mkdir -p output/crawl output/final_rescore output/run50
+        run: mkdir -p output/crawl output/final_sync
 
-      - name: Crawl official grain and keyword food-operation sources
+      - name: Collect new official and keyword vacancies
         env:
           EAGLE_CRAWL_CONFIG: config/crawl_aug22_2026.yml
-          MAX_ROWS: ${{ inputs.max_new_rows }}
+          MAX_ROWS: ${{ env.MAX_NEW_ROWS }}
           OUTPUT_DIR: output/crawl
         run: python -m eagle.target_crawl
 
-      - name: Validate Notion token without failing the crawl
+      - name: Validate Final DB connection
         id: notion_preflight
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
@@ -93,38 +106,27 @@ jobs:
 
           print(reason)
           if not valid:
-              print("::warning::Notion rescore skipped. Replace the repository NOTION_TOKEN secret, then run this workflow manually again.")
+              print(
+                  "::warning::Crawl completed, but Final DB synchronization was skipped. "
+                  "Replace NOTION_TOKEN and rerun manually."
+              )
           PY
 
-      - name: Recalculate existing Final DB under AUG22 model
+      - name: Score, deduplicate and synchronize Final DB
         if: steps.notion_preflight.outputs.valid == 'true'
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          SOURCE_NOTION_DATA_SOURCE_ID: ${{ secrets.FINAL_NOTION_DATA_SOURCE_ID || '2403ff84-448e-4b24-b30d-3ced754b5450' }}
+          FINAL_NOTION_DATA_SOURCE_ID: ${{ secrets.FINAL_NOTION_DATA_SOURCE_ID || '2403ff84-448e-4b24-b30d-3ced754b5450' }}
           NOTION_VERSION: "2026-03-11"
           EAGLE_CONFIG: config/scoring_aug22_2026.yml
-          AUSTRALIA_ARRIVAL_DATE: "2026-08-15"
-          AVAILABLE_START_DATE: "2026-08-22"
-          MAX_ROWS: "200"
-          URL_CHECK_ENABLED: "true"
-          OUTPUT_DIR: output/final_rescore
-        run: python -m eagle.aug22_run
+          CRAWL_REPORT: output/crawl/crawl_report.json
+          OUTPUT_DIR: output/final_sync
+          MAX_FINAL_ROWS: ${{ env.MAX_FINAL_ROWS }}
+          MAX_EXISTING_RECHECKS: "100"
+          APPLY_CHANGES: "true"
+        run: python -m eagle.final_sync
 
-      - name: Select 50 target records from Stage 1
-        if: steps.notion_preflight.outputs.valid == 'true'
-        env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          SOURCE_NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID || '2ca701ec-01ea-4dfb-864f-a2f7175e5e66' }}
-          NOTION_VERSION: "2026-03-11"
-          EAGLE_CONFIG: config/scoring_aug22_2026.yml
-          AUSTRALIA_ARRIVAL_DATE: "2026-08-15"
-          AVAILABLE_START_DATE: "2026-08-22"
-          MAX_ROWS: ${{ inputs.max_new_rows }}
-          URL_CHECK_ENABLED: "true"
-          OUTPUT_DIR: output/run50
-        run: python -m eagle.aug22_run
-
-      - name: Write run status
+      - name: Write cycle status
         if: always()
         env:
           NOTION_VALID: ${{ steps.notion_preflight.outputs.valid }}
@@ -133,6 +135,7 @@ jobs:
           python - <<'PY'
           import json
           import os
+          from datetime import datetime, timezone
           from pathlib import Path
 
           path = Path("output/workflow_status.json")
@@ -140,11 +143,17 @@ jobs:
           path.write_text(
               json.dumps(
                   {
-                      "official_and_keyword_crawl_attempted": True,
-                      "notion_rescore_attempted": os.getenv("NOTION_VALID") == "true",
+                      "run_at": datetime.now(timezone.utc).isoformat(),
+                      "cycle": "collect -> gate -> score -> deduplicate -> Final DB -> close stale URLs",
+                      "raw_limit": int(os.getenv("MAX_NEW_ROWS", "50")),
+                      "final_limit": int(os.getenv("MAX_FINAL_ROWS", "15")),
+                      "candidate_work_rights": os.getenv(
+                          "CANDIDATE_WORK_RIGHTS", "application_in_progress"
+                      ),
+                      "notion_sync_attempted": os.getenv("NOTION_VALID") == "true",
                       "notion_preflight": os.getenv("NOTION_REASON", "not run"),
-                      "arrival_date": "2026-08-15",
-                      "available_start_date": "2026-08-22",
+                      "protected_apply_statuses": ["APPLIED", "INTERVIEW"],
+                      "scheduled_local_time": "17:00 Asia/Kuala_Lumpur",
                   },
                   indent=2,
               ),
@@ -152,11 +161,11 @@ jobs:
           )
           PY
 
-      - name: Upload AUG22 crawl and score reports
+      - name: Upload cycle reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: eagle-aug22-run50-${{ github.run_id }}-${{ github.run_attempt }}
+          name: eagle-final-db-loop-${{ github.run_id }}-${{ github.run_attempt }}
           path: output/
           if-no-files-found: warn
           retention-days: 30
