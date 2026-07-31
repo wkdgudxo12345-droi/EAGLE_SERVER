@@ -1,0 +1,33 @@
+{
+  "schema_version": "EAGLE-GMAIL-SNAPSHOT-V1",
+  "snapshot_date": "2026-07-31",
+  "window_start": "2026-07-01",
+  "source": "sanitized connected Gmail audit",
+  "privacy": {
+    "message_bodies_stored": false,
+    "email_addresses_stored": false,
+    "names_stored": false,
+    "document_numbers_stored": false,
+    "raw_subjects_stored": false
+  },
+  "observed_sample": {
+    "unique_recruitment_outcomes": 12,
+    "separate_right_to_work_verification_events": 1,
+    "sampled_application_receipts": 13,
+    "sampled_overlevel_or_credential_sensitive_applications": 6
+  },
+  "signals": {
+    "work_rights_declared_ineligible": 1,
+    "right_to_work_verification_incomplete": 1,
+    "age_or_dob_screening_error": 1,
+    "post_interview_rejection": 1,
+    "high_competition_unique_roles": 3,
+    "overlevel_or_credential_sensitive_rejections": 4,
+    "generic_or_no_specific_reason_rejections": 3
+  },
+  "notes": [
+    "Signal categories can overlap; for example a managerial role may also cite a large candidate pool.",
+    "The sample is operational evidence, not a statistically calibrated hiring-probability dataset.",
+    "No model weight should learn automatically until at least 10 outcomes exist within the same role cluster."
+  ]
+}

@@ -33,9 +33,6 @@ on:
         description: Optional row limit for a smoke run
         required: false
         type: string
-  schedule:
-    # 01:00, 09:00 and 17:00 Asia/Kuala_Lumpur (UTC+8)
-    - cron: "0 17,1,9 * * *"
 
 permissions:
   contents: read
@@ -80,10 +77,12 @@ jobs:
         run: exit 1
 
   pipeline:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    if: github.event_name == 'workflow_dispatch'
     needs: tests
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    outputs:
+      notion_valid: ${{ steps.notion_preflight.outputs.valid }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -97,9 +96,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: state
-          key: eagle-operational-state-v2-${{ github.run_id }}
+          key: eagle-operational-state-v3-${{ github.run_id }}
           restore-keys: |
-            eagle-operational-state-v2-
+            eagle-operational-state-v3-
 
       - name: Read and classify Gmail recruitment outcomes
         continue-on-error: true
@@ -110,9 +109,48 @@ jobs:
           GMAIL_FEEDBACK_OUTPUT: output/gmail_outcomes.json
           GMAIL_FEEDBACK_STATE: state/gmail_feedback_state.json
           GMAIL_MAX_MESSAGES: "50"
+          CANDIDATE_WORK_RIGHTS: ${{ inputs.candidate_work_rights }}
         run: python -m eagle.gmail_feedback
 
+      - name: Validate Notion credentials without failing feedback collection
+        id: notion_preflight
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID || '2ca701ec-01ea-4dfb-864f-a2f7175e5e66' }}
+          NOTION_VERSION: "2026-03-11"
+        run: |
+          python - <<'PY'
+          import os
+          import requests
+
+          token = os.getenv("NOTION_TOKEN", "").strip()
+          source_id = os.getenv("NOTION_DATA_SOURCE_ID", "").replace("-", "").strip()
+          valid = False
+          reason = "NOTION_TOKEN secret is missing"
+          if token and source_id:
+              try:
+                  response = requests.get(
+                      f"https://api.notion.com/v1/data_sources/{source_id}",
+                      headers={
+                          "Authorization": f"Bearer {token}",
+                          "Notion-Version": os.getenv("NOTION_VERSION", "2026-03-11"),
+                      },
+                      timeout=15,
+                  )
+                  valid = response.status_code == 200
+                  reason = f"Notion preflight HTTP {response.status_code}"
+              except requests.RequestException as exc:
+                  reason = f"Notion preflight request failed: {type(exc).__name__}"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"valid={'true' if valid else 'false'}\n")
+              handle.write(f"reason={reason}\n")
+          print(reason)
+          if not valid:
+              print("::warning::Notion audit skipped; Gmail feedback and artifacts remain available through Direct Bridge mode.")
+          PY
+
       - name: Run incremental Eagle audit
+        if: steps.notion_preflight.outputs.valid == 'true'
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
@@ -121,7 +159,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
           STRICT_SCHEMA: "true"
-          MAX_ROWS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_rows || '' }}
+          MAX_ROWS: ${{ inputs.max_rows }}
           URL_CHECK_ENABLED: "true"
           URL_CHECK_TIMEOUT_SECONDS: "12"
           URL_CACHE_LIVE_SECONDS: "86400"
@@ -129,22 +167,49 @@ jobs:
           URL_CACHE_UNKNOWN_SECONDS: "10800"
           INCREMENTAL_AUDIT_STATUSES: "PENDING,RECHECK"
           EAGLE_EVIDENCE_FILE: data/policy_evidence.json
-          RAG_USE_LLM: ${{ github.event_name == 'workflow_dispatch' && inputs.run_llm_rag || false }}
-          REQUIRE_LLM_RAG: ${{ github.event_name == 'workflow_dispatch' && inputs.require_llm_rag || false }}
+          RAG_USE_LLM: ${{ inputs.run_llm_rag }}
+          REQUIRE_LLM_RAG: ${{ inputs.require_llm_rag }}
           PROMOTION_REQUIRE_CV_READY: "true"
-          CANDIDATE_WORK_RIGHTS: ${{ github.event_name == 'workflow_dispatch' && inputs.candidate_work_rights || 'application_in_progress' }}
+          CANDIDATE_WORK_RIGHTS: ${{ inputs.candidate_work_rights }}
           OUTCOME_FEEDBACK_FILE: output/gmail_outcomes.json
           STATE_DIR: state
           OUTPUT_DIR: output
           EAGLE_RUN_KEY: ${{ github.run_id }}
         run: python -m eagle.incremental
 
+      - name: Write Direct Bridge status
+        if: always()
+        env:
+          NOTION_VALID: ${{ steps.notion_preflight.outputs.valid }}
+          NOTION_REASON: ${{ steps.notion_preflight.outputs.reason }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("output/integration_status.json")
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(
+              json.dumps(
+                  {
+                      "gmail_feedback_attempted": True,
+                      "notion_audit_ran": os.getenv("NOTION_VALID") == "true",
+                      "notion_preflight": os.getenv("NOTION_REASON", "not run"),
+                      "fallback": "DIRECT_BRIDGE" if os.getenv("NOTION_VALID") != "true" else "NONE",
+                  },
+                  indent=2,
+              ),
+              encoding="utf-8",
+          )
+          PY
+
       - name: Save cross-run URL and Gmail state
         if: always() && hashFiles('state/**') != ''
         uses: actions/cache/save@v4
         with:
           path: state
-          key: eagle-operational-state-v2-${{ github.run_id }}
+          key: eagle-operational-state-v3-${{ github.run_id }}
 
       - name: Upload audit, candidates and feedback
         if: always()
@@ -158,7 +223,7 @@ jobs:
           retention-days: 14
 
   promote:
-    if: github.event_name == 'workflow_dispatch' && inputs.promote_final
+    if: github.event_name == 'workflow_dispatch' && inputs.promote_final && needs.pipeline.outputs.notion_valid == 'true'
     needs: pipeline
     runs-on: ubuntu-latest
     timeout-minutes: 15
