@@ -16,6 +16,10 @@ on:
         options:
           - application_in_progress
           - granted
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/aug22-run50.yml
 
 permissions:
   contents: read
@@ -56,7 +60,7 @@ jobs:
           OUTPUT_DIR: output/final_rescore
         run: python -m eagle.aug22_run
 
-      - name: Select 50 newest target records from Stage 1
+      - name: Select 50 target records from Stage 1
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           SOURCE_NOTION_DATA_SOURCE_ID: ${{ secrets.NOTION_DATA_SOURCE_ID || '2ca701ec-01ea-4dfb-864f-a2f7175e5e66' }}
@@ -64,7 +68,7 @@ jobs:
           EAGLE_CONFIG: config/scoring_aug22_2026.yml
           AUSTRALIA_ARRIVAL_DATE: "2026-08-15"
           AVAILABLE_START_DATE: "2026-08-22"
-          MAX_ROWS: ${{ inputs.max_new_rows }}
+          MAX_ROWS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_new_rows || '50' }}
           URL_CHECK_ENABLED: "true"
           OUTPUT_DIR: output/run50
         run: python -m eagle.aug22_run
