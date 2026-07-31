@@ -1,0 +1,190 @@
+profile:
+  id: malaysia_korean_ops_v3
+  name: Malaysia Korean Operations Eagle V3
+  version: 3
+  purpose: >-
+    Select only high-value Malaysia vacancies where Korean-native language value and
+    3+ years of Agoda hotel/flight operations, escalation, QA, SME and coaching
+    experience create a realistic hiring advantage. The scope includes in-house
+    platform, travel, fintech, payments, crypto/blockchain and selected premium BPO roles.
+
+candidate:
+  nationality: Korean
+  korean_level: Native
+  english_level: B1-B2
+  total_operations_years: 3.25
+  malaysia_experience: true
+  employer_context: IGT Solutions - Agoda Project
+  verified_strengths:
+    - hotel and flight customer operations
+    - reservations, refunds and reissues
+    - overbooking and supplier negotiation
+    - escalation and complaint resolution
+    - QA and zero fatal error operations
+    - SME and floor support
+    - coaching and onboarding for 15+ hires
+    - KPI, SLA and high-volume case management
+    - 24/7 shift reliability
+
+scope:
+  countries:
+    - Malaysia
+  target_industries:
+    - Crypto / Blockchain
+    - Fintech / Payments
+    - Travel / OTA
+    - Technology Platform
+    - Financial Services Operations
+    - Premium BPO / Shared Services
+  target_companies:
+    tier_1:
+      - OKX
+      - Bitget
+      - Bybit
+      - Binance
+      - Crypto.com
+      - Agoda
+      - Trip.com
+      - Klook
+      - TikTok
+      - ByteDance
+      - Tencent
+      - Shopee
+      - Cisco
+      - OSTTRA
+      - Standard Chartered
+      - American Express
+    excluded_by_default:
+      - IGT Solutions
+
+role_tracks:
+  primary:
+    - Korean Senior Customer Support
+    - Korean Customer Operations
+    - Crypto Exchange User Operations
+    - Payment / Transaction Operations
+    - Risk / Fraud / Investigations Operations
+    - KYC / AML / Compliance Operations
+    - Trust & Safety / Content Operations
+    - QA / SME / Trainer / Floor Support
+    - Partner / Merchant / Client Operations
+    - L1 Operations Analyst / Onboarding Support
+    - Travel Platform Operations
+  reject:
+    - Sales / Business Development
+    - Retail Management
+    - Software Engineering
+    - Legal Counsel
+    - Senior Compliance Management
+
+weights:
+  final:
+    hiring_reality: 30
+    career_transfer: 25
+    salary: 20
+    career_upside: 15
+    authorization_stability: 10
+  hiring_reality:
+    korean_advantage: 25
+    direct_operations_match: 25
+    seniority_fit: 15
+    english_feasibility: 10
+    freshness: 10
+    source_confidence: 10
+    individual_url: 5
+  career_transfer:
+    customer_operations: 25
+    escalation_qa_training: 25
+    travel_payment_platform: 20
+    korean_market: 15
+    tools_process: 15
+
+salary_bands_myr_monthly:
+  minimum_actionable: 8000
+  preferred_minimum: 9500
+  undisclosed_score: 48
+  bands:
+    - minimum: 13000
+      score: 100
+    - minimum: 11500
+      score: 94
+    - minimum: 10000
+      score: 86
+    - minimum: 9000
+      score: 76
+    - minimum: 8000
+      score: 66
+    - minimum: 0
+      score: 20
+
+authorization_scores:
+  employment_pass_provided: 100
+  supported: 95
+  available: 88
+  existing_valid_pass: 82
+  unknown: 48
+  no: 5
+  local_only: 0
+
+thresholds:
+  apply_first: 80
+  apply: 72
+  minimum_hiring_reality_a: 74
+  minimum_hiring_reality_b: 64
+  max_shortlist: 20
+  report_top: 5
+
+hard_gates:
+  reject_statuses:
+    - closed
+    - expired
+    - filled
+    - cancelled
+    - no longer accepting applications
+  reject_terms:
+    - unpaid
+    - volunteer only
+    - commission only
+    - self-employed only
+    - cold calling
+    - door to door sales
+    - legal counsel
+    - software engineer
+    - developer
+    - data scientist
+  local_only_terms:
+    - malaysian only
+    - malaysia citizen only
+    - local nationals only
+    - permanent resident only
+    - existing work rights required and no sponsorship
+  mandatory_language_terms:
+    - mandarin required
+    - fluent mandarin required
+    - native mandarin required
+    - chinese language mandatory
+  mandatory_credential_terms:
+    - cams certification required
+    - acams required
+    - law degree required
+    - practicing certificate required
+  overlevel_terms:
+    - head of
+    - director
+    - vice president
+  excluded_company_exception:
+    salary_minimum: 12000
+    promotion_terms:
+      - team lead
+      - quality analyst
+      - trainer
+      - operations lead
+      - workforce management
+      - real-time analyst
+  require_korean_advantage: true
+  reject_below_salary_floor: true
+
+cv_variants:
+  - Korean Operations / Senior CX
+  - Tech · Fintech · Crypto Operations
+  - Risk · Trust & Safety · Compliance Operations
