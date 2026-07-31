@@ -55,9 +55,16 @@ def env_int(name: str) -> int | None:
 
 
 def check_url(url: str, *, timeout_seconds: int = 18) -> bool | None:
+    """Return True for live, False for confirmed closed, and None for uncertainty.
+
+    Temporary server failures, access controls and rate limits must not close a
+    vacancy in the Final DB. Only clear client-side absence or an explicit closed
+    marker is treated as confirmed closure.
+    """
+
     if not url:
         return False
-    headers = {"User-Agent": "Mozilla/5.0 EagleJobVerifier/1.1"}
+    headers = {"User-Agent": "Mozilla/5.0 EagleJobVerifier/1.2"}
     try:
         response = requests.get(
             url,
@@ -68,10 +75,14 @@ def check_url(url: str, *, timeout_seconds: int = 18) -> bool | None:
     except requests.RequestException:
         return None
     try:
-        if response.status_code in {401, 403, 429}:
+        if response.status_code in {401, 403, 408, 425, 429}:
             return None
-        if response.status_code >= 400:
+        if response.status_code >= 500:
+            return None
+        if response.status_code in {404, 410}:
             return False
+        if response.status_code >= 400:
+            return None
         body = response.content[:200_000].decode(
             response.encoding or "utf-8", errors="ignore"
         ).lower()
