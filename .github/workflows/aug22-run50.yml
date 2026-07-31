@@ -127,7 +127,7 @@ jobs:
           STALE_AFTER_DAYS: "14"
           PIPELINE_RUN_ID: EAGLE-${{ github.run_id }}-${{ github.run_attempt }}
           APPLY_CHANGES: "true"
-        run: python -m eagle.pipeline_loop
+        run: python -m eagle.pipeline_cli
 
       - name: Write cycle status
         if: always()
