@@ -3,7 +3,7 @@ require_visa_eligibility: true
 thresholds:
   fit_a: 82
   fit_b: 68
-  min_reality: 55
+  min_reality: 58
   min_hr: 60
   min_ccstm: 68
 
@@ -37,6 +37,7 @@ hard_reject_terms:
   - must have own transport
   - australian citizenship required
   - permanent resident only
+  - unrestricted australian working rights
   - minimum 3 years australian experience
   - unpaid volunteer
   - accommodation exchange
@@ -50,9 +51,24 @@ preferred_terms:
   - working holiday
   - night shift
   - roster
-  - steward
+  - night auditor
+  - night porter
+  - receptionist
   - guest service
   - reservations
+  - receival point operator
+  - grain sampler
+  - grain sampling
+  - grain classification
+  - weighbridge
+  - quality assurance
+  - quality control
+  - food safety
+  - haccp
+  - data entry
+  - despatch
+  - dispatch
+  - production administrator
   - site administrator
   - mobilisation
 
@@ -63,9 +79,59 @@ experience_terms:
   - operations
   - escalation
   - quality assurance
+  - quality control
+  - data entry
+  - documentation
+  - reconciliation
   - training
+  - food safety
+  - haccp
   - hotel
   - flight
+  - dispatch
+  - despatch
+
+# Gmail outcome audit showed repeated applications above the candidate's evidenced
+# level. These terms are not automatic deletes; they are held unless direct
+# people-management, budget or credential evidence exists.
+overlevel_title_terms:
+  - store manager
+  - accommodation manager
+  - front office manager
+  - office and administration manager
+  - office & administration manager
+  - inventory control manager
+  - project supervisor
+  - shift supervisor
+  - operations manager
+  - venue manager
+
+credentialled_title_terms:
+  - case worker
+  - social worker
+  - community liaison
+  - counsellor
+  - registered nurse
+  - compliance manager
+
+management_evidence_terms:
+  - direct reports
+  - people management
+  - performance management
+  - hiring responsibility
+  - budget ownership
+  - roster ownership
+  - disciplinary process
+  - manager title
+
+credential_evidence_terms:
+  - australian qualification
+  - bachelor of social work
+  - ahpra registration
+  - diploma of community services
+  - case management qualification
+  - mandatory registration
+  - australian licence
 
 search_url_patterns:
   - /jobs?
