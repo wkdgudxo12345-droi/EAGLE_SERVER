@@ -8,59 +8,78 @@ sources:
     company: CBH Group
     route: grain
     official: true
+    location: Western Australia regional grain sites
     url: https://careers.cbh.com.au/go/Vacancies/516510/
   - id: graincorp_harvest_2026
     company: GrainCorp
     route: grain
     official: true
     emit_page: true
+    location: Various regional locations across QLD, NSW and VIC
     url: https://jobs.graincorp.com.au/job/Various-Locations-2026-GrainCorp-Harvest-Casual-Intake-All/1363615866/
   - id: bunge_viterra_harvest
     company: Bunge / Viterra
     route: grain
     official: true
+    location: South Australia, Victoria and Western Australia harvest sites
     url: https://bunge.com/Australia/Harvest-jobs
   - id: bunge_sa_vic_harvest
     company: Bunge / Viterra
     route: grain
     official: true
     emit_page: true
+    location: Eyre Peninsula, Central SA, Eastern SA and Western Victoria
     url: https://bunge.bigredsky.com/page.php?AdvertID=918201&pageID=160&windowUID=0
   - id: bunge_wa_harvest
     company: Bunge / Viterra
     route: grain
     official: true
     emit_page: true
+    location: Bunbury, Kukerin and Arthur River, Western Australia
     url: https://bunge.bigredsky.com/page.php?AdvertID=918182&pageID=160&windowUID=0
   - id: seek_grain_sampler
     company: SEEK market search
     route: grain
     official: false
+    location: Australia
     url: https://www.seek.com.au/grain-sampler-jobs
   - id: seek_weighbridge
     company: SEEK market search
     route: grain
     official: false
+    location: Australia
     url: https://www.seek.com.au/weighbridge-operator-jobs
   - id: seek_meat_qa
     company: SEEK market search
     route: food
     official: false
+    location: Australia
+    industry_context: meat processing
+    trusted_industry_context: true
     url: https://www.seek.com.au/meat-processing-quality-assurance-jobs
   - id: seek_food_qc
     company: SEEK market search
     route: food
     official: false
+    location: Australia
+    industry_context: food manufacturing
+    trusted_industry_context: true
     url: https://www.seek.com.au/food-manufacturing-quality-control-jobs
   - id: seek_food_despatch
     company: SEEK market search
     route: food
     official: false
+    location: Australia
+    industry_context: food manufacturing
+    trusted_industry_context: true
     url: https://www.seek.com.au/food-manufacturing-despatch-jobs
   - id: seek_food_admin
     company: SEEK market search
     route: food
     official: false
+    location: Australia
+    industry_context: food manufacturing
+    trusted_industry_context: true
     url: https://www.seek.com.au/food-manufacturing-administration-jobs
 
 grain_terms:
@@ -137,7 +156,6 @@ hard_reject_terms:
   - australian citizen only
   - permanent resident only
   - unrestricted australian working rights
-  - no visa sponsorship
   - unpaid volunteer
 
 transport_risk_terms:
