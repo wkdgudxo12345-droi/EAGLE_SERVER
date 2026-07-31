@@ -1,0 +1,169 @@
+require_visa_eligibility: true
+
+candidate_context:
+  evaluation_date: 2026-07-31
+  australia_arrival_date: 2026-08-15
+  available_start_date: 2026-08-22
+  driver_licence: false
+  vehicle: false
+  work_rights_state: application_in_progress
+  run_label: RUN50-AUG22-20260731
+
+thresholds:
+  fit_a: 82
+  fit_b: 68
+  min_reality: 58
+  min_hr: 60
+  min_ccstm: 68
+
+weights:
+  ccstm:
+    role_match: 38
+    experience: 25
+    no_car: 15
+    accommodation: 10
+    visa: 7
+    freshness: 5
+  hr:
+    direct_experience: 30
+    transferable_ops: 30
+    shift_reliability: 15
+    language: 10
+    location_commitment: 10
+    requirements: 5
+  reality:
+    live_link: 25
+    individual_job_url: 20
+    no_hard_gate: 25
+    accommodation: 10
+    evidence_quality: 10
+    freshness: 10
+
+hard_reject_terms:
+  - unrestricted drivers licence
+  - unrestricted driver's licence
+  - own reliable vehicle
+  - must have own transport
+  - australian citizenship required
+  - permanent resident only
+  - minimum 3 years australian experience
+  - unpaid volunteer
+  - accommodation exchange
+
+preferred_terms:
+  - guest service
+  - guest services
+  - receptionist
+  - front office
+  - night auditor
+  - night operations
+  - hotel all rounder
+  - hospitality all rounder
+  - housekeeping
+  - kitchen hand
+  - food and beverage
+  - resort
+  - lodge
+  - caravan park
+  - staff accommodation
+  - accommodation provided
+  - live on site
+  - receival point operator
+  - grain receivals
+  - grain sampler
+  - grain sampling
+  - grain quality
+  - weighbridge operator
+  - weighbridge administrator
+  - harvest casual
+  - quality assurance
+  - quality control
+  - qa assistant
+  - qc assistant
+  - food safety
+  - haccp
+  - data entry
+  - dispatch clerk
+  - despatch clerk
+  - production administrator
+  - cold store
+  - meat processing
+  - abattoir
+  - packing
+  - no experience required
+  - training provided
+  - working holiday
+  - night shift
+  - roster
+
+experience_terms:
+  - customer service
+  - guest service
+  - reservations
+  - operations
+  - escalation
+  - quality assurance
+  - quality control
+  - data entry
+  - documentation
+  - reconciliation
+  - training
+  - food safety
+  - haccp
+  - hotel
+  - flight
+  - dispatch
+  - despatch
+
+search_url_patterns:
+  - /jobs?
+  - seek.com.au/jobs
+  - indeed.com/jobs
+  - linkedin.com/jobs/search
+  - jora.com/
+
+target_groups:
+  hospitality:
+    - guest service
+    - receptionist
+    - front office
+    - night auditor
+    - hotel all rounder
+    - hospitality all rounder
+    - housekeeping
+    - kitchen hand
+    - food and beverage
+    - resort
+    - lodge
+    - caravan park
+  grain_harvest:
+    - receival point operator
+    - grain receivals
+    - grain sampler
+    - grain sampling
+    - grain quality
+    - weighbridge operator
+    - harvest casual
+    - silo operator
+  food_processing_ops:
+    - quality assurance
+    - quality control
+    - qa assistant
+    - qc assistant
+    - food safety
+    - haccp
+    - data entry
+    - dispatch clerk
+    - despatch clerk
+    - production administrator
+    - cold store
+    - meat processing
+    - abattoir
+    - packing
+
+specified_work_rules:
+  never_guarantee: true
+  grain_requires_regional_site_and_actual_duties: true
+  generic_weighbridge_is_not_grain_harvest: true
+  food_qa_dispatch_requires_industry_location_and_duties: true
+  secondary_processing_not_automatic: true
