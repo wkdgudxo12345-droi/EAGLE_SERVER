@@ -43,7 +43,7 @@ def test_gmail_classifier_detects_high_competition() -> None:
 
 def test_role_signal_marks_managerial_overreach_without_storing_email() -> None:
     band, family, flags = classify_role_signal(
-        "Application Outcome - Accommodation Manager",
+        "Application Outcome - Accommodation Manager at Ayers Rock Resort",
         "Thank you for applying.",
     )
     assert band == "MANAGERIAL_OR_CREDENTIALLED"
