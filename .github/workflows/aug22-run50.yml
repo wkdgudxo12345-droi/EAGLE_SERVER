@@ -9,7 +9,7 @@ on:
       max_new_rows:
         description: Maximum raw vacancies retained from each crawl cycle
         required: true
-        default: "50"
+        default: "100"
         type: string
       max_final_rows:
         description: Maximum verified finalists written to Final DB per cycle
@@ -33,7 +33,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  MAX_NEW_ROWS: ${{ github.event.inputs.max_new_rows || '50' }}
+  MAX_NEW_ROWS: ${{ github.event.inputs.max_new_rows || '100' }}
   MAX_FINAL_ROWS: ${{ github.event.inputs.max_final_rows || '15' }}
   CANDIDATE_WORK_RIGHTS: ${{ github.event.inputs.candidate_work_rights || 'application_in_progress' }}
 
@@ -148,7 +148,7 @@ jobs:
                   {
                       "run_at": datetime.now(timezone.utc).isoformat(),
                       "cycle": "collect -> live URL gate -> score -> deduplicate -> Final DB lifecycle -> close/stale maintenance",
-                      "raw_limit": int(os.getenv("MAX_NEW_ROWS", "50")),
+                      "raw_limit": int(os.getenv("MAX_NEW_ROWS", "100")),
                       "final_limit": int(os.getenv("MAX_FINAL_ROWS", "15")),
                       "candidate_work_rights": os.getenv(
                           "CANDIDATE_WORK_RIGHTS", "application_in_progress"
